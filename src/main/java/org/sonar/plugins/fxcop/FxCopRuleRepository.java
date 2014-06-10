@@ -19,11 +19,14 @@
  */
 package org.sonar.plugins.fxcop;
 
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.commons.lang.StringUtils;
+import org.sonar.api.config.Settings;
 import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.RuleRepository;
 import org.sonar.api.rules.XMLRuleParser;
-
-import java.util.List;
 
 public class FxCopRuleRepository extends RuleRepository {
 
@@ -31,17 +34,31 @@ public class FxCopRuleRepository extends RuleRepository {
 
   private final XMLRuleParser xmlRuleParser;
   private final String languageKey;
+  private final String customKey;
+  private final Settings settings;
 
-  public FxCopRuleRepository(FxCopConfiguration fxCopConf, XMLRuleParser xmlRuleParser) {
+  public FxCopRuleRepository(FxCopConfiguration fxCopConf, String customKey, XMLRuleParser xmlRuleParser, Settings settings) {
     super(fxCopConf.repositoryKey(), fxCopConf.languageKey());
     setName(REPOSITORY_NAME);
     this.xmlRuleParser = xmlRuleParser;
     this.languageKey = fxCopConf.languageKey();
+    this.customKey = customKey;
+    this.settings = settings;
   }
 
   @Override
   public List<Rule> createRules() {
-    return xmlRuleParser.parse(getClass().getResourceAsStream("/org/sonar/plugins/fxcop/" + languageKey + "-rules.xml"));
+    
+    List<Rule> rules = new ArrayList<Rule>();
+        
+    rules.addAll(xmlRuleParser.parse(getClass().getResourceAsStream("/org/sonar/plugins/fxcop/" + languageKey + "-rules.xml")));
+   
+    String customRules = this.settings.getString(this.customKey);
+    
+    if (StringUtils.isNotBlank(customRules)) {
+      rules.addAll(xmlRuleParser.parse(new StringReader(customRules)));
+    }
+    
+    return rules;
   }
-
 }
