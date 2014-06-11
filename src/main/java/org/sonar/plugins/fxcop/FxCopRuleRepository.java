@@ -22,7 +22,9 @@ package org.sonar.plugins.fxcop;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import javax.xml.stream.XMLStreamException;
 import org.apache.commons.lang.StringUtils;
+import org.jfree.util.Log;
 import org.sonar.api.config.Settings;
 import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.RuleRepository;
@@ -56,9 +58,13 @@ public class FxCopRuleRepository extends RuleRepository {
     String customRules = this.settings.getString(this.customKey);
     
     if (StringUtils.isNotBlank(customRules)) {
-      rules.addAll(xmlRuleParser.parse(new StringReader(customRules)));
+      try {
+        rules.addAll(xmlRuleParser.parse(new StringReader(customRules)));
+      } catch (Exception ex) {
+        Log.error("Cannot Load XML", ex);
+      }
     }
-    
     return rules;
+
   }
 }
