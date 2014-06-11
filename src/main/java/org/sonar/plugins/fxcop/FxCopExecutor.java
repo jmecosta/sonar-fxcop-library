@@ -30,21 +30,33 @@ public class FxCopExecutor {
 
   private static final int EXIT_CODE_SUCCESS = 0;
   private static final int EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD = 1024;
-
-  public void execute(String executable, String assemblies, File rulesetFile, File reportFile, int timeout) {
-    int exitCode = CommandExecutor.create().execute(
-      Command.create(getExecutable(executable))
-        .addArgument("/file:" + assemblies)
-        .addArgument("/ruleset:=" + rulesetFile.getAbsolutePath())
-        .addArgument("/out:" + reportFile.getAbsolutePath())
-        .addArgument("/outxsl:none")
-        .addArgument("/forceoutput")
-        .addArgument("/searchgac"),
-      TimeUnit.MINUTES.toMillis(timeout));
-    Preconditions.checkState(exitCode == EXIT_CODE_SUCCESS || exitCode == EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD,
-      "The execution of \"" + executable + "\" failed and returned " + exitCode + " as exit code.");
+  
+  public void execute(String executable, String assemblies, File rulesetFile, File reportFile, int timeout, String assemblyDependencyDirectories) {
+	    int exitCode = CommandExecutor.create().execute(
+	    		createCommand(executable, assemblies, rulesetFile, reportFile, assemblyDependencyDirectories),
+	      TimeUnit.MINUTES.toMillis(timeout));
+	    Preconditions.checkState(exitCode == EXIT_CODE_SUCCESS || exitCode == EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD,
+	      "The execution of \"" + executable + "\" failed and returned " + exitCode + " as exit code."); 
+	  }
+  
+  private Command createCommand(String executable, String assemblies, File rulesetFile, File reportFile, String assemblyDependencyDirectories) {
+	  Command command = Command.create(getExecutable(executable))
+      .addArgument("/file:" + assemblies)
+      .addArgument("/ruleset:=" + rulesetFile.getAbsolutePath())
+      .addArgument("/out:" + reportFile.getAbsolutePath())
+      .addArgument("/outxsl:none")
+      .addArgument("/forceoutput")
+      .addArgument("/searchgac");
+	  
+	  if(assemblyDependencyDirectories != null && assemblyDependencyDirectories.length() > 0) {
+		  String[] directories = assemblyDependencyDirectories.split(",");
+		  for (String directory : directories) {
+			  command.addArgument("/directory:" + directory);
+		}
+	  }
+	  return command;
   }
-
+  
   /**
    * Handles deprecated property: "installDirectory", which gives the path to the directory only.
    */

@@ -21,6 +21,7 @@ package org.sonar.plugins.fxcop;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.Sensor;
@@ -91,7 +92,7 @@ public class FxCopSensor implements Sensor {
     File reportFile = new File(fileSystem.workingDir(), "fxcop-report.xml");
 
     executor.execute(settings.getString(fxCopConf.fxCopCmdPropertyKey()), settings.getString(fxCopConf.assemblyPropertyKey()),
-      rulesetFile, reportFile, settings.getInt(fxCopConf.timeoutPropertyKey()));
+      rulesetFile, reportFile, settings.getInt(fxCopConf.timeoutPropertyKey()), settings.getString(fxCopConf.directoryPropertyKey()));
 
     for (FxCopIssue issue : parser.parse(reportFile)) {
       if (!hasFileAndLine(issue)) {

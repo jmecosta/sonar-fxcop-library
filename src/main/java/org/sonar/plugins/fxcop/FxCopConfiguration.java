@@ -33,12 +33,14 @@ public class FxCopConfiguration {
   private final String repositoryKey;
   private String timeoutPropertyKey;
   private final String assemblyPropertyKey;
+  private final String directoryPropertyKey;
   private String fxCopCmdPropertyKey;
 
-  public FxCopConfiguration(String languageKey, String repositoryKey, String assemblyPropertyKey, String fxCopCmdPropertyKey, String timeoutPropertyKey) {
+  public FxCopConfiguration(String languageKey, String repositoryKey, String assemblyPropertyKey, String directoryPropertyKey, String fxCopCmdPropertyKey, String timeoutPropertyKey) {
     this.languageKey = languageKey;
     this.repositoryKey = repositoryKey;
     this.assemblyPropertyKey = assemblyPropertyKey;
+    this.directoryPropertyKey = directoryPropertyKey;
     this.fxCopCmdPropertyKey = fxCopCmdPropertyKey;
     this.timeoutPropertyKey = timeoutPropertyKey;
   }
@@ -54,6 +56,10 @@ public class FxCopConfiguration {
   public String assemblyPropertyKey() {
     return assemblyPropertyKey;
   }
+  
+  public String directoryPropertyKey() { 
+	  return directoryPropertyKey; 
+	  }
 
   public String fxCopCmdPropertyKey() {
     return fxCopCmdPropertyKey;

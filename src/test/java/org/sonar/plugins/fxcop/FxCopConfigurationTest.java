@@ -41,17 +41,19 @@ public class FxCopConfigurationTest {
 
   @Test
   public void test() {
-    FxCopConfiguration fxCopConf = new FxCopConfiguration("cs", "cs-fxcop", "fooAssemblyKey", "fooFxCopCmdPathKey", "footimeout");
+    FxCopConfiguration fxCopConf = new FxCopConfiguration("cs", "cs-fxcop", "fooAssemblyKey", "fooDirectoryPropertyKey", "fooFxCopCmdPathKey", "footimeout");
     assertThat(fxCopConf.languageKey()).isEqualTo("cs");
     assertThat(fxCopConf.repositoryKey()).isEqualTo("cs-fxcop");
     assertThat(fxCopConf.assemblyPropertyKey()).isEqualTo("fooAssemblyKey");
+    assertThat(fxCopConf.directoryPropertyKey()).isEqualTo("fooDirectoryPropertyKey");
     assertThat(fxCopConf.fxCopCmdPropertyKey()).isEqualTo("fooFxCopCmdPathKey");
     assertThat(fxCopConf.timeoutPropertyKey()).isEqualTo("footimeout");
 
-    fxCopConf = new FxCopConfiguration("vbnet", "vbnet-fxcop", "barAssemblyKey", "barFxCopCmdPathKey", "bartimeout");
+    fxCopConf = new FxCopConfiguration("vbnet", "vbnet-fxcop", "barAssemblyKey", "barDirectoryPropertyKey", "barFxCopCmdPathKey", "bartimeout");
     assertThat(fxCopConf.languageKey()).isEqualTo("vbnet");
     assertThat(fxCopConf.repositoryKey()).isEqualTo("vbnet-fxcop");
     assertThat(fxCopConf.assemblyPropertyKey()).isEqualTo("barAssemblyKey");
+    assertThat(fxCopConf.directoryPropertyKey()).isEqualTo("barDirectoryPropertyKey");
     assertThat(fxCopConf.fxCopCmdPropertyKey()).isEqualTo("barFxCopCmdPathKey");
     assertThat(fxCopConf.timeoutPropertyKey()).isEqualTo("bartimeout");
   }
@@ -63,7 +65,7 @@ public class FxCopConfigurationTest {
     when(settings.getString("fooAssemblyKey")).thenReturn(new File(ASSEMBLY_PATH).getAbsolutePath());
     when(settings.hasKey("fooFxCopCmdPathKey")).thenReturn(true);
 
-    new FxCopConfiguration("", "", "fooAssemblyKey", "fooFxCopCmdPathKey", "").checkProperties(settings);
+    new FxCopConfiguration("", "", "fooAssemblyKey", "", "fooFxCopCmdPathKey", "").checkProperties(settings);
   }
 
   @Test
@@ -73,7 +75,7 @@ public class FxCopConfigurationTest {
     when(settings.getString("fooAssemblyKey")).thenReturn(new File("src/test/resources/FxCopConfigurationTest/MyLibrary").getAbsolutePath());
     when(settings.hasKey("fooFxCopCmdPathKey")).thenReturn(true);
 
-    new FxCopConfiguration("", "", "fooAssemblyKey", "fooFxCopCmdPathKey", "").checkProperties(settings);
+    new FxCopConfiguration("", "", "fooAssemblyKey", "", "fooFxCopCmdPathKey", "").checkProperties(settings);
   }
 
   @Test
@@ -84,7 +86,7 @@ public class FxCopConfigurationTest {
     Settings settings = mock(Settings.class);
     when(settings.hasKey("fooAssemblyKey")).thenReturn(false);
 
-    new FxCopConfiguration("", "", "fooAssemblyKey", "", "").checkProperties(settings);
+    new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "").checkProperties(settings);
   }
 
   @Test
@@ -98,7 +100,7 @@ public class FxCopConfigurationTest {
     when(settings.hasKey("fooAssemblyKey")).thenReturn(true);
     when(settings.getString("fooAssemblyKey")).thenReturn(new File("src/test/resources/FxCopConfigurationTest/MyLibraryNotFound.dll").getAbsolutePath());
 
-    new FxCopConfiguration("", "", "fooAssemblyKey", "", "").checkProperties(settings);
+    new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "").checkProperties(settings);
   }
 
   @Test
@@ -112,7 +114,7 @@ public class FxCopConfigurationTest {
     when(settings.hasKey("fooAssemblyKey")).thenReturn(true);
     when(settings.getString("fooAssemblyKey")).thenReturn(new File("src/test/resources/FxCopConfigurationTest/MyLibraryWithoutPdb.dll").getAbsolutePath());
 
-    new FxCopConfiguration("", "", "fooAssemblyKey", "", "").checkProperties(settings);
+    new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "").checkProperties(settings);
   }
 
   @Test
@@ -123,7 +125,7 @@ public class FxCopConfigurationTest {
     props.put("sonar.fxcop.installDirectory", "fake/path/FxCopCmd.exe");
     settings.addProperties(props);
 
-    FxCopConfiguration conf = new FxCopConfiguration("", "", "assembly.prop", "cmd.prop", "");
+    FxCopConfiguration conf = new FxCopConfiguration("", "", "assembly.prop", "", "cmd.prop", "");
 
     conf.checkProperties(settings);
     assertThat(settings.getString(conf.fxCopCmdPropertyKey())).isEqualTo("fake/path/FxCopCmd.exe");
