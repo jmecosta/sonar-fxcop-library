@@ -50,7 +50,7 @@ public class FxCopRuleRepositoryTest {
   public void test_cs() {
     Settings settings = new Settings();
     settings.appendProperty(FXCOP_CUSTOM_RULES_PROPERTY_KEY, null);    
-    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("cs", "cs-fxcop", "", "", ""), FXCOP_CUSTOM_RULES_PROPERTY_KEY, new XMLRuleParser(), settings);
+    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("cs", "cs-fxcop", "", "", "", ""), FXCOP_CUSTOM_RULES_PROPERTY_KEY, new XMLRuleParser(), settings);
     assertThat(repo.getLanguage()).isEqualTo("cs");
     assertThat(repo.getKey()).isEqualTo("cs-fxcop");
 
@@ -67,7 +67,7 @@ public class FxCopRuleRepositoryTest {
   public void test_vbnet() {
     Settings settings = new Settings();
     settings.appendProperty("sonar.cs.fxcop.customRules", profile);    
-    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("vbnet", "vbnet-fxcop", "", "", ""), FXCOP_CUSTOM_RULES_PROPERTY_KEY, new XMLRuleParser(), settings);
+    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("vbnet", "vbnet-fxcop", "", "", "", ""), FXCOP_CUSTOM_RULES_PROPERTY_KEY, new XMLRuleParser(), settings);
     assertThat(repo.getLanguage()).isEqualTo("vbnet");
     assertThat(repo.getKey()).isEqualTo("vbnet-fxcop");
 
