@@ -30,12 +30,14 @@ public class FxCopExecutor {
 
   private static final int EXIT_CODE_SUCCESS = 0;
   private static final int EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD = 1024;
+  private static final int EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD_2 = 1536;
   
   public void execute(String executable, String assemblies, File rulesetFile, File reportFile, int timeout, String assemblyDependencyDirectories) {
 	    int exitCode = CommandExecutor.create().execute(
 	    		createCommand(executable, assemblies, rulesetFile, reportFile, assemblyDependencyDirectories),
 	      TimeUnit.MINUTES.toMillis(timeout));
-	    Preconditions.checkState(exitCode == EXIT_CODE_SUCCESS || exitCode == EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD,
+            
+	    Preconditions.checkState(exitCode == EXIT_CODE_SUCCESS || exitCode == EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD || exitCode == EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD_2,
 	      "The execution of \"" + executable + "\" failed and returned " + exitCode + " as exit code."); 
 	  }
   
