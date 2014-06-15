@@ -19,36 +19,44 @@
  */
 package org.sonar.plugins.fxcop;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.sonar.api.utils.command.Command;
 import org.sonar.api.utils.command.CommandExecutor;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FxCopExecutor {
 
+  private static final Logger LOG = LoggerFactory.getLogger(FxCopExecutor.class);
   private static final int EXIT_CODE_SUCCESS = 0;
-  private static final int EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD = 1024;
-  private static final int EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD_2 = 1536;
   
   public void execute(String executable, String assemblies, File rulesetFile, File reportFile, int timeout, String assemblyDependencyDirectories) {
-	    int exitCode = CommandExecutor.create().execute(
-	    		createCommand(executable, assemblies, rulesetFile, reportFile, assemblyDependencyDirectories),
-	      TimeUnit.MINUTES.toMillis(timeout));
+    int exitCode = CommandExecutor.create().execute(createCommand(executable, assemblies, rulesetFile, reportFile, assemblyDependencyDirectories), TimeUnit.MINUTES.toMillis(timeout));
             
-	    Preconditions.checkState(exitCode == EXIT_CODE_SUCCESS || exitCode == EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD || exitCode == EXIT_CODE_SUCCESS_SHOULD_BREAK_BUILD_2,
-	      "The execution of \"" + executable + "\" failed and returned " + exitCode + " as exit code."); 
+    StringBuilder errorData = new StringBuilder();
+    boolean isFatal = IsFatalError(exitCode, errorData);
+    if(exitCode != EXIT_CODE_SUCCESS) {
+        LOG.info("Some errors were reported during execution of FxCop Error Code: " + exitCode);
+        LOG.info("Error Data: " + errorData);
+        LOG.info("See: http://msdn.microsoft.com/en-us/library/bb429400(v=vs.80).aspx");        
+    }
+    
+    Preconditions.checkState(exitCode == EXIT_CODE_SUCCESS || !isFatal,
+      "The execution of \"" + executable + "\" failed and returned " + exitCode + " as exit code.");
 	  }
   
   private Command createCommand(String executable, String assemblies, File rulesetFile, File reportFile, String assemblyDependencyDirectories) {
-	  Command command = Command.create(getExecutable(executable))
-      .addArgument("/file:" + assemblies)
-      .addArgument("/ruleset:=" + rulesetFile.getAbsolutePath())
-      .addArgument("/out:" + reportFile.getAbsolutePath())
-      .addArgument("/outxsl:none")
-      .addArgument("/forceoutput")
-      .addArgument("/searchgac");
+        Command command = Command.create(getExecutable(executable))
+            .addArgument("/file:" + assemblies)
+            .addArgument("/ruleset:=" + rulesetFile.getAbsolutePath())
+            .addArgument("/out:" + reportFile.getAbsolutePath())
+            .addArgument("/outxsl:none")
+            .addArgument("/forceoutput")
+            .addArgument("/searchgac");
 	  
 	  if(assemblyDependencyDirectories != null && assemblyDependencyDirectories.length() > 0) {
 		  String[] directories = assemblyDependencyDirectories.split(",");
@@ -59,6 +67,69 @@ public class FxCopExecutor {
 	  return command;
   }
   
+  @VisibleForTesting
+  boolean IsFatalError(int errorCode, StringBuilder errorData) {
+      boolean isFatal = false;
+      int errorCopy = errorCode;
+      
+      if((errorCode & 0x1) == 1) {
+          errorData.append("[Analysis error]");
+          isFatal = true;          
+      }
+      
+      errorCopy = errorCopy >> 1;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Rule exceptions]");          
+      }
+      
+      errorCopy = errorCopy >> 1;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Project load error]");          
+      }
+      
+      errorCopy = errorCopy >> 1;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Assembly load error]");          
+      }      
+      
+      errorCopy = errorCopy >> 1;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Rule library load error]");          
+      }
+      
+      errorCopy = errorCopy >> 1;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Import report load error]");          
+      }      
+      
+      errorCopy = errorCopy >> 1;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Output error]");          
+      }
+      
+      errorCopy = errorCopy >> 1;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Command line switch error]");          
+      }
+      
+      errorCopy = errorCopy >> 1;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Initialization error]");          
+      }      
+      
+      errorCopy = errorCopy >> 1;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Assembly references error]");          
+      }
+      
+      errorCopy = errorCopy >> 4;
+      if((errorCopy & 0x1) == 1) {
+          errorData.append("[Unknown error]");          
+      }                  
+      
+      return isFatal;
+  } 
+    
   /**
    * Handles deprecated property: "installDirectory", which gives the path to the directory only.
    */
