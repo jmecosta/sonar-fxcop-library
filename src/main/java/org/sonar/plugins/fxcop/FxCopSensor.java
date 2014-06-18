@@ -104,7 +104,7 @@ public class FxCopSensor implements Sensor {
       org.sonar.api.resources.File sonarFile = fileProvider.fromIOFile(file);
       if (sonarFile == null) {
         logSkippedIssueOutsideOfSonarQube(issue, file);
-      } else if (fxCopConf.languageKey().equals(sonarFile.getLanguage().getKey())) {
+      } else {
         Issuable issuable = perspectives.as(Issuable.class, sonarFile);
         if (issuable == null) {
           logSkippedIssueOutsideOfSonarQube(issue, file);
