@@ -38,6 +38,7 @@ public class FxCopExecutor {
     int exitCode = CommandExecutor.create().execute(createCommand(executable, assemblies, rulesetFile, reportFile, assemblyDependencyDirectories), TimeUnit.MINUTES.toMillis(timeout));
             
     StringBuilder errorData = new StringBuilder();
+
     boolean isFatal = IsFatalError(exitCode, errorData);
     if(exitCode != EXIT_CODE_SUCCESS) {
         LOG.info("Some errors were reported during execution of FxCop Error Code: " + exitCode);
@@ -47,7 +48,9 @@ public class FxCopExecutor {
     
     Preconditions.checkState(exitCode == EXIT_CODE_SUCCESS || !isFatal,
       "The execution of \"" + executable + "\" failed and returned " + exitCode + " as exit code.");
-	  }
+    
+    }
+
   
   private Command createCommand(String executable, String assemblies, File rulesetFile, File reportFile, String assemblyDependencyDirectories) {
         Command command = Command.create(getExecutable(executable))
