@@ -90,17 +90,19 @@ public class FxCopConfiguration {
   }
 
   private void checkAssemblyProperty(Settings settings) {
-    String assemblyPath = settings.getString(assemblyPropertyKey);
+    String[] assembliesPaths = settings.getString(assemblyPropertyKey).split(",");
 
-    File assemblyFile = new File(assemblyPath);
-    Preconditions.checkArgument(
-      assemblyFile.isFile(),
-      "Cannot find the assembly \"" + assemblyFile.getAbsolutePath() + "\" provided by the property \"" + assemblyPropertyKey + "\".");
+    for(String assemblyPath : assembliesPaths) {
+      File assemblyFile = new File(assemblyPath);
+      Preconditions.checkArgument(
+        assemblyFile.isFile(),
+        "Cannot find the assembly \"" + assemblyFile.getAbsolutePath() + "\" provided by the property \"" + assemblyPropertyKey + "\".");
 
-    File pdbFile = new File(pdbPath(assemblyPath));
-    Preconditions.checkArgument(
-      pdbFile.isFile(),
-      "Cannot find the .pdb file \"" + pdbFile.getAbsolutePath() + "\" inferred from the property \"" + assemblyPropertyKey + "\".");
+      File pdbFile = new File(pdbPath(assemblyPath));
+      Preconditions.checkArgument(
+        pdbFile.isFile(),
+        "Cannot find the .pdb file \"" + pdbFile.getAbsolutePath() + "\" inferred from the property \"" + assemblyPropertyKey + "\".");
+    }
   }
 
   private static String pdbPath(String assemblyPath) {

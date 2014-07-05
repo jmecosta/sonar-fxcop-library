@@ -35,24 +35,25 @@ public class FxCopExecutor {
 
   public void execute(String executable, String assemblies, File rulesetFile, File reportFile, int timeout, boolean aspnet, String assemblyDependencyDirectories) {
     Command command = Command.create(getExecutable(executable))
-      .addArgument("/file:" + assemblies)
       .addArgument("/ruleset:=" + rulesetFile.getAbsolutePath())
       .addArgument("/out:" + reportFile.getAbsolutePath())
       .addArgument("/outxsl:none")
       .addArgument("/forceoutput")
-      .addArgument("/searchgac");      
+      .addArgument("/searchgac"); 
     if (aspnet) {
       command.addArgument("/aspnet");
     }
     
-	  if(assemblyDependencyDirectories != null && assemblyDependencyDirectories.length() > 0) {
-		  String[] directories = assemblyDependencyDirectories.split(",");
-		  for (String directory : directories) {
-			  command.addArgument("/directory:" + directory);
-		}
-	  }
+    for (String assembly : assemblies.split(",")) {
+      command.addArgument("/file:" + assembly);
+    }
     
-
+    if(assemblyDependencyDirectories != null && assemblyDependencyDirectories.length() > 0) {
+      for (String directory : assemblyDependencyDirectories.split(",")) {
+        command.addArgument("/directory:" + directory);
+      }
+    }
+    
     int exitCode = CommandExecutor.create().execute(
       command,
       TimeUnit.MINUTES.toMillis(timeout));
