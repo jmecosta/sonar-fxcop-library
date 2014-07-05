@@ -61,7 +61,7 @@ public class FxCopSensorTest {
     Project project = mock(Project.class);
 
     FxCopSensor sensor = new FxCopSensor(
-      new FxCopConfiguration("", "foo-fxcop", "", "", "", ""),
+      new FxCopConfiguration("", "foo-fxcop", "", "", "", "", ""),
       settings, profile, fileSystem, perspectives);
 
     when(fileSystem.files(Mockito.any(FileQuery.class))).thenReturn(ImmutableList.<File>of());
@@ -89,7 +89,8 @@ public class FxCopSensorTest {
     when(fxCopConf.assemblyPropertyKey()).thenReturn("assemblyKey");
     when(fxCopConf.directoryPropertyKey()).thenReturn("directoryKey");
     when(fxCopConf.fxCopCmdPropertyKey()).thenReturn("fxcopcmdPath");
-    when(fxCopConf.timeoutPropertyKey()).thenReturn("timout");
+    when(fxCopConf.timeoutPropertyKey()).thenReturn("timeout");
+    when(fxCopConf.aspnetPropertyKey()).thenReturn("aspnet");
 
     FxCopSensor sensor = new FxCopSensor(
       fxCopConf,
@@ -97,7 +98,7 @@ public class FxCopSensorTest {
     when(settings.hasKey("assemblyKey")).thenReturn(true);
     when(settings.hasKey("fxcopcmdPath")).thenReturn(true);
 
-    List<ActiveRule> activeRules = mockActiveRules("CA0000", "CA1000");
+    List<ActiveRule> activeRules = mockActiveRules("CA0000", "CA1000", "CustomRuleTemplate", "CR1000");
     when(profile.getActiveRulesByRepository("foo-fxcop")).thenReturn(activeRules);
 
     SensorContext context = mock(SensorContext.class);
@@ -110,7 +111,8 @@ public class FxCopSensorTest {
     when(settings.getString("assemblyKey")).thenReturn("MyLibrary.dll");
     when(settings.getString("directoryKey")).thenReturn("c:\\assemblyDependencyDirectories 1,c:\\assemblyDependencyDirectories 2");
     when(settings.getString("fxcopcmdPath")).thenReturn("FxCopCmd.exe");
-    when(settings.getInt("timeout")).thenReturn(0);
+    when(settings.getInt("timeout")).thenReturn(42);
+    when(settings.getBoolean("aspnet")).thenReturn(true);
 
     org.sonar.api.resources.File fooSonarFileWithIssuable = mockSonarFile("foo");
     org.sonar.api.resources.File fooSonarFileWithoutIssuable = mockSonarFile("foo");
@@ -121,6 +123,7 @@ public class FxCopSensorTest {
     when(fileProvider.fromIOFile(new File(new File("basePath"), "Class6.cs"))).thenReturn(fooSonarFileWithIssuable);
     when(fileProvider.fromIOFile(new File(new File("basePath"), "Class7.cs"))).thenReturn(fooSonarFileWithoutIssuable);
     when(fileProvider.fromIOFile(new File(new File("basePath"), "Class8.cs"))).thenReturn(barSonarFile);
+    when(fileProvider.fromIOFile(new File(new File("basePath"), "Class9.cs"))).thenReturn(fooSonarFileWithIssuable);
 
     Issue issue1 = mock(Issue.class);
     IssueBuilder issueBuilder1 = mockIssueBuilder();
@@ -130,9 +133,13 @@ public class FxCopSensorTest {
     IssueBuilder issueBuilder2 = mockIssueBuilder();
     when(issueBuilder2.build()).thenReturn(issue2);
 
+    Issue issue3 = mock(Issue.class);
+    IssueBuilder issueBuilder3 = mockIssueBuilder();
+    when(issueBuilder3.build()).thenReturn(issue3);
+
     Issuable issuable = mock(Issuable.class);
     when(perspectives.as(Issuable.class, fooSonarFileWithIssuable)).thenReturn(issuable);
-    when(issuable.newIssueBuilder()).thenReturn(issueBuilder1, issueBuilder2);
+    when(issuable.newIssueBuilder()).thenReturn(issueBuilder1, issueBuilder2, issueBuilder3);
 
     FxCopRulesetWriter writer = mock(FxCopRulesetWriter.class);
 
@@ -146,28 +153,36 @@ public class FxCopSensorTest {
         new FxCopIssue(500, "CA0000", "basePath", "Class5.cs", 5, "Second message"),
         new FxCopIssue(600, "CA1000", "basePath", "Class6.cs", 6, "Third message"),
         new FxCopIssue(700, "CA0000", "basePath", "Class7.cs", 7, "Fourth message"),
-        new FxCopIssue(800, "CA0000", "basePath", "Class8.cs", 8, "Fifth message")));
+        new FxCopIssue(800, "CA0000", "basePath", "Class8.cs", 8, "Fifth message"),
+        new FxCopIssue(800, "CR1000", "basePath", "Class9.cs", 9, "Sixth message")));
 
     sensor.analyse(context, fileProvider, writer, parser, executor);
 
-    verify(writer).write(ImmutableList.of("CA0000", "CA1000"), new File(workingDir, "fxcop-sonarqube.ruleset"));
-    verify(executor).execute("FxCopCmd.exe", "MyLibrary.dll", new File(workingDir, "fxcop-sonarqube.ruleset"), new File(workingDir, "fxcop-report.xml"), 0, "c:\\assemblyDependencyDirectories 1,c:\\assemblyDependencyDirectories 2");
+    verify(writer).write(ImmutableList.of("CA0000", "CA1000", "CR1000"), new File(workingDir, "fxcop-sonarqube.ruleset"));
+    verify(executor).execute("FxCopCmd.exe", "MyLibrary.dll", new File(workingDir, "fxcop-sonarqube.ruleset"), new File(workingDir, "fxcop-report.xml"), 42, true, "c:\\assemblyDependencyDirectories 1,c:\\assemblyDependencyDirectories 2");
 
     verify(issuable).addIssue(issue1);
     verify(issuable).addIssue(issue2);
+    verify(issuable).addIssue(issue3);
 
+    verify(issueBuilder1).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
     verify(issueBuilder1).line(5);
     verify(issueBuilder1).message("Second message");
 
+    verify(issueBuilder2).ruleKey(RuleKey.of("foo-fxcop", "_CA1000"));
     verify(issueBuilder2).line(6);
     verify(issueBuilder2).message("Third message");
+
+    verify(issueBuilder3).ruleKey(RuleKey.of("foo-fxcop", "CustomRuleTemplate_42"));
+    verify(issueBuilder3).line(9);
+    verify(issueBuilder3).message("Sixth message");
   }
 
   @Test
   public void check_properties() {
     thrown.expectMessage("fooAssemblyKey");
 
-    FxCopConfiguration fxCopConf = new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "");
+    FxCopConfiguration fxCopConf = new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "", "");
     new FxCopSensor(fxCopConf, mock(Settings.class), mock(RulesProfile.class), mock(ModuleFileSystem.class), mock(ResourcePerspectives.class))
       .analyse(mock(Project.class), mock(SensorContext.class));
   }
@@ -188,11 +203,21 @@ public class FxCopSensorTest {
     return issueBuilder;
   }
 
-  private static List<ActiveRule> mockActiveRules(String... activeRuleConfigKeys) {
+  private static List<ActiveRule> mockActiveRules(String... activeConfigRuleKeys) {
     ImmutableList.Builder<ActiveRule> builder = ImmutableList.builder();
-    for (String activeRuleConfigKey : activeRuleConfigKeys) {
+    for (String activeConfigRuleKey : activeConfigRuleKeys) {
       ActiveRule activeRule = mock(ActiveRule.class);
-      when(activeRule.getConfigKey()).thenReturn(activeRuleConfigKey);
+      if ("CustomRuleTemplate".equals(activeConfigRuleKey)) {
+        when(activeRule.getRuleKey()).thenReturn(activeConfigRuleKey);
+      } else if (activeConfigRuleKey.startsWith("CR")) {
+        when(activeRule.getRuleKey()).thenReturn("CustomRuleTemplate_42");
+        when(activeRule.getParameter("CheckId")).thenReturn(activeConfigRuleKey);
+      } else if (activeConfigRuleKey.startsWith("CA")) {
+        when(activeRule.getConfigKey()).thenReturn(activeConfigRuleKey);
+        when(activeRule.getRuleKey()).thenReturn("_" + activeConfigRuleKey);
+      } else {
+        throw new IllegalArgumentException("Unsupported active rule config key: " + activeConfigRuleKey);
+      }
       builder.add(activeRule);
     }
     return builder.build();

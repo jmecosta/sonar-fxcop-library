@@ -41,7 +41,7 @@ public class FxCopReportParserTest {
 
     FxCopIssue issue = issues.get(0);
     assertThat(issue.reportLine()).isEqualTo(9);
-    assertThat(issue.ruleKey()).isEqualTo("AssembliesShouldHaveValidStrongNames");
+    assertThat(issue.ruleConfigKey()).isEqualTo("CA2210");
     assertThat(issue.path()).isNull();
     assertThat(issue.file()).isNull();
     assertThat(issue.line()).isNull();
@@ -49,7 +49,7 @@ public class FxCopReportParserTest {
 
     issue = issues.get(2);
     assertThat(issue.reportLine()).isEqualTo(23);
-    assertThat(issue.ruleKey()).isEqualTo("IdentifiersShouldBeSpelledCorrectly");
+    assertThat(issue.ruleConfigKey()).isEqualTo("CA1704");
     assertThat(issue.path()).isEqualTo("c:\\Users\\SonarSource\\Documents\\Visual Studio 2013\\Projects\\CSharpPlayground\\MyLibrary");
     assertThat(issue.file()).isEqualTo("Class1.cs");
     assertThat(issue.line()).isEqualTo(12);
@@ -65,11 +65,11 @@ public class FxCopReportParserTest {
   }
 
   @Test
-  public void missing_typename() {
-    thrown.expectMessage("Missing attribute \"TypeName\" in element <Message>");
-    thrown.expectMessage("missing_typename.xml at line 8");
+  public void missing_checkid() {
+    thrown.expectMessage("Missing attribute \"CheckId\" in element <Message>");
+    thrown.expectMessage("missing_checkid.xml at line 8");
 
-    new FxCopReportParser().parse(new File("src/test/resources/FxCopReportParserTest/missing_typename.xml"));
+    new FxCopReportParser().parse(new File("src/test/resources/FxCopReportParserTest/missing_checkid.xml"));
   }
 
   @Test

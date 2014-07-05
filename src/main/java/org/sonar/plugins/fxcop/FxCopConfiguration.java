@@ -31,18 +31,20 @@ public class FxCopConfiguration {
 
   private final String languageKey;
   private final String repositoryKey;
-  private String timeoutPropertyKey;
   private final String assemblyPropertyKey;
   private final String directoryPropertyKey;
   private String fxCopCmdPropertyKey;
+  private String timeoutPropertyKey;
+  private final String aspnetPropertyKey;
 
-  public FxCopConfiguration(String languageKey, String repositoryKey, String assemblyPropertyKey, String directoryPropertyKey, String fxCopCmdPropertyKey, String timeoutPropertyKey) {
+  public FxCopConfiguration(String languageKey, String repositoryKey, String assemblyPropertyKey, String fxCopCmdPropertyKey, String timeoutPropertyKey, String aspnetPropertyKey, String directoryPropertyKey) {
     this.languageKey = languageKey;
     this.repositoryKey = repositoryKey;
     this.assemblyPropertyKey = assemblyPropertyKey;
     this.directoryPropertyKey = directoryPropertyKey;
     this.fxCopCmdPropertyKey = fxCopCmdPropertyKey;
     this.timeoutPropertyKey = timeoutPropertyKey;
+    this.aspnetPropertyKey = aspnetPropertyKey;
   }
 
   public String languageKey() {
@@ -69,44 +71,36 @@ public class FxCopConfiguration {
     return timeoutPropertyKey;
   }
 
+  public String aspnetPropertyKey() {
+    return aspnetPropertyKey;
+  }
+
   public void checkProperties(Settings settings) {
+    checkMandatoryProperties(settings);
     checkAssemblyProperty(settings);
     checkFxCopCmdPathProperty(settings);
     checkTimeoutProeprty(settings);
   }
 
-  private void checkTimeoutProeprty(Settings settings) {
-    if (!settings.hasKey(timeoutPropertyKey) && settings.hasKey(DEPRECATED_TIMEOUT_MINUTES_PROPERTY_KEY)) {
-      timeoutPropertyKey = DEPRECATED_TIMEOUT_MINUTES_PROPERTY_KEY;
-    }
-  }
-
-  private void checkFxCopCmdPathProperty(Settings settings) {
-    if (!settings.hasKey(fxCopCmdPropertyKey) && settings.hasKey(DEPRECATED_FXCOPCMD_PATH_PROPERTY_KEY)) {
-      fxCopCmdPropertyKey = DEPRECATED_FXCOPCMD_PATH_PROPERTY_KEY;
+  private void checkMandatoryProperties(Settings settings) {
+    if (!settings.hasKey(assemblyPropertyKey)) {
+      throw new IllegalArgumentException("The property \"" + assemblyPropertyKey + "\" must be set and the project must have been built to execute FxCop rules. "
+        + "This property can be automatically set by the Analysis Bootstrapper for Visual Studio Projects plugin, see: http://docs.codehaus.org/x/TAA1Dg");
     }
   }
 
   private void checkAssemblyProperty(Settings settings) {
-    checkProperty(settings, assemblyPropertyKey);
-
     String assemblyPath = settings.getString(assemblyPropertyKey);
 
     File assemblyFile = new File(assemblyPath);
     Preconditions.checkArgument(
       assemblyFile.isFile(),
-      "Cannot find the assembly \"" + assemblyFile.getAbsolutePath() + "\" provided in the property \"" + assemblyPropertyKey + "\".");
+      "Cannot find the assembly \"" + assemblyFile.getAbsolutePath() + "\" provided by the property \"" + assemblyPropertyKey + "\".");
 
     File pdbFile = new File(pdbPath(assemblyPath));
     Preconditions.checkArgument(
       pdbFile.isFile(),
       "Cannot find the .pdb file \"" + pdbFile.getAbsolutePath() + "\" inferred from the property \"" + assemblyPropertyKey + "\".");
-  }
-
-  private static void checkProperty(Settings settings, String property) {
-    if (!settings.hasKey(property)) {
-      throw new IllegalArgumentException("The property \"" + property + "\" must be set.");
-    }
   }
 
   private static String pdbPath(String assemblyPath) {
@@ -116,6 +110,25 @@ public class FxCopConfiguration {
     }
 
     return assemblyPath.substring(0, i) + ".pdb";
+  }
+
+  private void checkFxCopCmdPathProperty(Settings settings) {
+    if (!settings.hasKey(fxCopCmdPropertyKey) && settings.hasKey(DEPRECATED_FXCOPCMD_PATH_PROPERTY_KEY)) {
+      fxCopCmdPropertyKey = DEPRECATED_FXCOPCMD_PATH_PROPERTY_KEY;
+    }
+
+    String value = settings.getString(fxCopCmdPropertyKey);
+
+    File file = new File(value);
+    Preconditions.checkArgument(
+      file.isFile(),
+      "Cannot find the FxCopCmd executable \"" + file.getAbsolutePath() + "\" provided by the property \"" + fxCopCmdPropertyKey + "\".");
+  }
+
+  private void checkTimeoutProeprty(Settings settings) {
+    if (!settings.hasKey(timeoutPropertyKey) && settings.hasKey(DEPRECATED_TIMEOUT_MINUTES_PROPERTY_KEY)) {
+      timeoutPropertyKey = DEPRECATED_TIMEOUT_MINUTES_PROPERTY_KEY;
+    }
   }
 
 }

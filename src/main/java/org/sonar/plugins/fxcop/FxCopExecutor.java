@@ -19,131 +19,56 @@
  */
 package org.sonar.plugins.fxcop;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.sonar.api.utils.command.Command;
 import org.sonar.api.utils.command.CommandExecutor;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class FxCopExecutor {
 
   private static final Logger LOG = LoggerFactory.getLogger(FxCopExecutor.class);
-  private static final int EXIT_CODE_SUCCESS = 0;
-  
-  public void execute(String executable, String assemblies, File rulesetFile, File reportFile, int timeout, String assemblyDependencyDirectories) {
-    int exitCode = CommandExecutor.create().execute(createCommand(executable, assemblies, rulesetFile, reportFile, assemblyDependencyDirectories), TimeUnit.MINUTES.toMillis(timeout));
-            
-    StringBuilder errorData = new StringBuilder();
+  private static final String EXECUTABLE = "FxCopCmd.exe";
 
-    boolean isFatal = IsFatalError(exitCode, errorData);
-    if(exitCode != EXIT_CODE_SUCCESS) {
-        LOG.info("Some errors were reported during execution of FxCop Error Code: " + exitCode);
-        LOG.info("Error Data: " + errorData);
-        LOG.info("See: http://msdn.microsoft.com/en-us/library/bb429400(v=vs.80).aspx");        
+  public void execute(String executable, String assemblies, File rulesetFile, File reportFile, int timeout, boolean aspnet, String assemblyDependencyDirectories) {
+    Command command = Command.create(getExecutable(executable))
+      .addArgument("/file:" + assemblies)
+      .addArgument("/ruleset:=" + rulesetFile.getAbsolutePath())
+      .addArgument("/out:" + reportFile.getAbsolutePath())
+      .addArgument("/outxsl:none")
+      .addArgument("/forceoutput")
+      .addArgument("/searchgac");      
+    if (aspnet) {
+      command.addArgument("/aspnet");
     }
     
-    Preconditions.checkState(exitCode == EXIT_CODE_SUCCESS || !isFatal,
-      "The execution of \"" + executable + "\" failed and returned " + exitCode + " as exit code.");
-    
-    }
-
-  
-  private Command createCommand(String executable, String assemblies, File rulesetFile, File reportFile, String assemblyDependencyDirectories) {
-        Command command = Command.create(getExecutable(executable))
-            .addArgument("/file:" + assemblies)
-            .addArgument("/ruleset:=" + rulesetFile.getAbsolutePath())
-            .addArgument("/out:" + reportFile.getAbsolutePath())
-            .addArgument("/outxsl:none")
-            .addArgument("/forceoutput")
-            .addArgument("/searchgac");
-	  
 	  if(assemblyDependencyDirectories != null && assemblyDependencyDirectories.length() > 0) {
 		  String[] directories = assemblyDependencyDirectories.split(",");
 		  for (String directory : directories) {
 			  command.addArgument("/directory:" + directory);
 		}
 	  }
-	  return command;
-  }
-  
-  @VisibleForTesting
-  boolean IsFatalError(int errorCode, StringBuilder errorData) {
-      boolean isFatal = false;
-      int errorCopy = errorCode;
-      
-      if((errorCode & 0x1) == 1) {
-          errorData.append("[Analysis error]");
-          isFatal = true;          
-      }
-      
-      errorCopy = errorCopy >> 1;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Rule exceptions]");          
-      }
-      
-      errorCopy = errorCopy >> 1;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Project load error]");          
-      }
-      
-      errorCopy = errorCopy >> 1;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Assembly load error]");          
-      }      
-      
-      errorCopy = errorCopy >> 1;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Rule library load error]");          
-      }
-      
-      errorCopy = errorCopy >> 1;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Import report load error]");          
-      }      
-      
-      errorCopy = errorCopy >> 1;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Output error]");          
-      }
-      
-      errorCopy = errorCopy >> 1;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Command line switch error]");          
-      }
-      
-      errorCopy = errorCopy >> 1;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Initialization error]");          
-      }      
-      
-      errorCopy = errorCopy >> 1;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Assembly references error]");          
-      }
-      
-      errorCopy = errorCopy >> 4;
-      if((errorCopy & 0x1) == 1) {
-          errorData.append("[Unknown error]");          
-      }                  
-      
-      return isFatal;
-  } 
     
+
+    int exitCode = CommandExecutor.create().execute(
+      command,
+      TimeUnit.MINUTES.toMillis(timeout));
+
+    LOG.info("FxCopCmd.exe ended with the exit code: " + exitCode);
+
+    Preconditions.checkState((exitCode & 1) == 0,
+      "The execution of \"" + executable + "\" failed and returned " + exitCode
+        + " as exit code. See http://msdn.microsoft.com/en-us/library/bb429400(v=vs.80).aspx for details.");
+  }
+
   /**
    * Handles deprecated property: "installDirectory", which gives the path to the directory only.
    */
-  private static String getExecutable(String propertyValue) {
-    String execName = "FxCopCmd.exe";
-
-    if (!propertyValue.endsWith(execName)) {
-      return (new File(propertyValue, execName)).getAbsolutePath();
-    } else {
-      return propertyValue;
-    }
+  private static String getExecutable(String path) {
+    return path.endsWith(EXECUTABLE) ? path : new File(path, EXECUTABLE).getAbsolutePath();
   }
 
 }

@@ -29,7 +29,7 @@ public class FxCopIssueTest {
   public void test() {
     FxCopIssue issue = new FxCopIssue(0, "S007", "path", null, null, "message");
     assertThat(issue.reportLine()).isEqualTo(0);
-    assertThat(issue.ruleKey()).isEqualTo("S007");
+    assertThat(issue.ruleConfigKey()).isEqualTo("S007");
     assertThat(issue.path()).isEqualTo("path");
     assertThat(issue.file()).isNull();
     assertThat(issue.line()).isNull();
@@ -37,7 +37,7 @@ public class FxCopIssueTest {
 
     issue = new FxCopIssue(42, "CA1000", null, "foo", 1, "bar");
     assertThat(issue.reportLine()).isEqualTo(42);
-    assertThat(issue.ruleKey()).isEqualTo("CA1000");
+    assertThat(issue.ruleConfigKey()).isEqualTo("CA1000");
     assertThat(issue.path()).isNull();
     assertThat(issue.file()).isEqualTo("foo");
     assertThat(issue.line()).isEqualTo(1);

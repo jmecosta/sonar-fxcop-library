@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.sonar.api.config.Settings;
 import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.XMLRuleParser;
+import org.sonar.check.Cardinality;
 
 public class FxCopRuleRepositoryTest {
 
@@ -48,36 +49,46 @@ public class FxCopRuleRepositoryTest {
   
   @Test
   public void test_cs() {
-    Settings settings = new Settings();
-    settings.appendProperty(FXCOP_CUSTOM_RULES_PROPERTY_KEY, null);    
-    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("cs", "cs-fxcop", "", "", "", ""), FXCOP_CUSTOM_RULES_PROPERTY_KEY, new XMLRuleParser(), settings);
+    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("cs", "cs-fxcop", "", "", "", "", ""), new XMLRuleParser());
     assertThat(repo.getLanguage()).isEqualTo("cs");
     assertThat(repo.getKey()).isEqualTo("cs-fxcop");
 
     List<Rule> rules = repo.createRules();
-    assertThat(rules.size()).isEqualTo(232);
+    assertThat(rules.size()).isEqualTo(233);
     for (Rule rule : rules) {
       assertThat(rule.getKey()).isNotNull();
       assertThat(rule.getName()).isNotNull();
       assertThat(rule.getDescription()).isNotNull();
     }
+
+    assertThat(containsCustomRule(rules)).isTrue();
   }
 
   @Test
   public void test_vbnet() {
-    Settings settings = new Settings();
-    settings.appendProperty("sonar.cs.fxcop.customRules", profile);    
-    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("vbnet", "vbnet-fxcop", "", "", "", ""), FXCOP_CUSTOM_RULES_PROPERTY_KEY, new XMLRuleParser(), settings);
+    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("vbnet", "vbnet-fxcop", "", "", "", "", ""), new XMLRuleParser());
     assertThat(repo.getLanguage()).isEqualTo("vbnet");
     assertThat(repo.getKey()).isEqualTo("vbnet-fxcop");
 
     List<Rule> rules = repo.createRules();
-    assertThat(rules.size()).isEqualTo(234);
+    assertThat(rules.size()).isEqualTo(233);
     for (Rule rule : rules) {
       assertThat(rule.getKey()).isNotNull();
       assertThat(rule.getName()).isNotNull();
       assertThat(rule.getDescription()).isNotNull();
     }
+
+    assertThat(containsCustomRule(rules)).isTrue();
+  }
+
+  private static boolean containsCustomRule(List<Rule> rules) {
+    for (Rule rule : rules) {
+      if ("CustomRuleTemplate".equals(rule.getKey()) && rule.getCardinality() == Cardinality.MULTIPLE) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
 }

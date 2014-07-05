@@ -1,5 +1,29 @@
 <rules>
 
+  <rule key="CustomRuleTemplate">
+    <cardinality>MULTIPLE</cardinality>
+    <priority>MAJOR</priority>
+    <name><![CDATA[Template for custom FxCop rules]]></name>
+    <description>
+      <![CDATA[
+<p>
+Follow these steps to make your custom FxCop rules available in SonarQube:
+</p>
+
+<ol>
+  <li>Place your custom FxCop rules assemblies in the "Rules" subdirectory of your FxCop installation directory.</li>
+  <li>For each custom rule:</li>
+  <ol>
+    <li>Create a new rule in SonarQube by "copying" this rule template and specify the <code>CheckId</code> of your custom rule, a title, a description, and a default severity.</li>
+    <li>Enable the newly created rule in your quality profile</li>
+  </ol>
+  <li>Relaunch an analysis on your projects, et voilà, your custom rules are executed!</li>
+</ol>
+      ]]>
+    </description>
+    <param key="CheckId" />
+  </rule>
+
   <rule key="DoNotDeclareStaticMembersOnGenericTypes">
     <configKey>CA1000</configKey>
     <priority>MAJOR</priority>

@@ -41,6 +41,8 @@ import java.util.List;
 
 public class FxCopSensor implements Sensor {
 
+  private static final String CUSTOM_RULE_KEY = "CustomRuleTemplate";
+  private static final String CUSTOM_RULE_CHECK_ID_PARAMETER = "CheckId";
   private static final Logger LOG = LoggerFactory.getLogger(FxCopSensor.class);
 
   private final FxCopConfiguration fxCopConf;
@@ -92,7 +94,7 @@ public class FxCopSensor implements Sensor {
     File reportFile = new File(fileSystem.workingDir(), "fxcop-report.xml");
 
     executor.execute(settings.getString(fxCopConf.fxCopCmdPropertyKey()), settings.getString(fxCopConf.assemblyPropertyKey()),
-      rulesetFile, reportFile, settings.getInt(fxCopConf.timeoutPropertyKey()), settings.getString(fxCopConf.directoryPropertyKey()));
+      rulesetFile, reportFile, settings.getInt(fxCopConf.timeoutPropertyKey()), settings.getBoolean(fxCopConf.aspnetPropertyKey()), settings.getString(fxCopConf.directoryPropertyKey()));
 
     for (FxCopIssue issue : parser.parse(reportFile)) {
       if (!hasFileAndLine(issue)) {
@@ -111,7 +113,7 @@ public class FxCopSensor implements Sensor {
         } else {
           issuable.addIssue(
             issuable.newIssueBuilder()
-              .ruleKey(RuleKey.of(fxCopConf.repositoryKey(), issue.ruleKey()))
+              .ruleKey(RuleKey.of(fxCopConf.repositoryKey(), ruleKey(issue.ruleConfigKey())))
               .line(issue.line())
               .message(issue.message())
               .build());
@@ -135,9 +137,27 @@ public class FxCopSensor implements Sensor {
   private List<String> enabledRuleConfigKeys() {
     ImmutableList.Builder<String> builder = ImmutableList.builder();
     for (ActiveRule activeRule : profile.getActiveRulesByRepository(fxCopConf.repositoryKey())) {
-      builder.add(activeRule.getConfigKey());
+      if (!CUSTOM_RULE_KEY.equals(activeRule.getRuleKey())) {
+        String effectiveConfigKey = activeRule.getConfigKey();
+        if (effectiveConfigKey == null) {
+          effectiveConfigKey = activeRule.getParameter(CUSTOM_RULE_CHECK_ID_PARAMETER);
+        }
+
+        builder.add(effectiveConfigKey);
+      }
     }
     return builder.build();
+  }
+
+  private String ruleKey(String ruleConfigKey) {
+    for (ActiveRule activeRule : profile.getActiveRulesByRepository(fxCopConf.repositoryKey())) {
+      if (ruleConfigKey.equals(activeRule.getConfigKey()) || ruleConfigKey.equals(activeRule.getParameter(CUSTOM_RULE_CHECK_ID_PARAMETER))) {
+        return activeRule.getRuleKey();
+      }
+    }
+
+    throw new IllegalStateException(
+      "Unable to find the rule key corresponding to the rule config key \"" + ruleConfigKey + "\" in repository \"" + fxCopConf.repositoryKey() + "\".");
   }
 
 }

@@ -5,7 +5,7 @@
    <Modules>
     <Module Name="mylibrary.dll">
      <Messages>
-      <Message Category="Microsoft.Design" CheckId="CA2210" Status="Active" Created="2014-02-26 00:22:14Z" FixCategory="NonBreaking" BreaksBuild="True">
+      <Message TypeName="AssembliesShouldHaveValidStrongNames" Category="Microsoft.Design" Status="Active" Created="2014-02-26 00:22:14Z" FixCategory="NonBreaking" BreaksBuild="True">
        <Issue Name="NoStrongName" Certainty="95" Level="CriticalError">Sign 'MyLibrary.dll' with a strong name key.</Issue>
       </Message>
      </Messages>

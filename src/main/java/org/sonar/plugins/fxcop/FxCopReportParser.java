@@ -47,7 +47,7 @@ public class FxCopReportParser {
     private File file;
     private XMLStreamReader stream;
     private final ImmutableList.Builder<FxCopIssue> filesBuilder = ImmutableList.builder();
-    private String ruleKey;
+    private String ruleConfigKey;
 
     public List<FxCopIssue> parse(File file) {
       this.file = file;
@@ -93,7 +93,7 @@ public class FxCopReportParser {
     }
 
     private void handleMessageTag() {
-      this.ruleKey = getRequiredAttribute("TypeName");
+      this.ruleConfigKey = getRequiredAttribute("CheckId");
     }
 
     private void handleIssueTag() throws XMLStreamException {
@@ -101,7 +101,7 @@ public class FxCopReportParser {
       String fileAttribute = getAttribute("File");
       Integer line = getIntAttribute("Line");
       String message = stream.getElementText();
-      filesBuilder.add(new FxCopIssue(stream.getLocation().getLineNumber(), ruleKey, path, fileAttribute, line, message));
+      filesBuilder.add(new FxCopIssue(stream.getLocation().getLineNumber(), ruleConfigKey, path, fileAttribute, line, message));
     }
 
     private String getRequiredAttribute(String name) {
