@@ -103,8 +103,6 @@ public class FxCopConfiguration {
         pdbFile.isFile(),
         "Cannot find the .pdb file \"" + pdbFile.getAbsolutePath() + "\" inferred from the property \"" + assemblyPropertyKey + "\".");
     }
-  }
-
   private static String pdbPath(String assemblyPath) {
     int i = assemblyPath.lastIndexOf('.');
     if (i == -1) {

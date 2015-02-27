@@ -39,7 +39,7 @@ public class FxCopExecutor {
       .addArgument("/out:" + reportFile.getAbsolutePath())
       .addArgument("/outxsl:none")
       .addArgument("/forceoutput")
-      .addArgument("/searchgac"); 
+      .addArgument("/searchgac");
     if (aspnet) {
       command.addArgument("/aspnet");
     }
