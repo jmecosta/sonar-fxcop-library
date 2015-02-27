@@ -34,7 +34,7 @@ public class FxCopExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FxCopExecutor.class);
   private static final String EXECUTABLE = "FxCopCmd.exe";
 
-  public void execute(String executable, String assemblies, File rulesetFile, File reportFile, int timeout, boolean aspnet, String assemblyDependencyDirectories) {
+  public void execute(String executable, String assemblies, File rulesetFile, File reportFile, int timeout, boolean aspnet, List<String> directories, List<String> references) {
     Command command = Command.create(getExecutable(executable))
       .addArgument("/ruleset:=" + rulesetFile.getAbsolutePath())
       .addArgument("/out:" + reportFile.getAbsolutePath())
@@ -46,9 +46,6 @@ public class FxCopExecutor {
       command.addArgument("/aspnet");
     }
 
-    for (String directory : directories) {
-      command.addArgument("/directory:" + directory);
-    }
     for (String reference : references) {
       command.addArgument("/reference:" + reference);
     }
@@ -57,10 +54,8 @@ public class FxCopExecutor {
       command.addArgument("/file:" + assembly);
     }
     
-    if(assemblyDependencyDirectories != null && assemblyDependencyDirectories.length() > 0) {
-      for (String directory : assemblyDependencyDirectories.split(",")) {
-        command.addArgument("/directory:" + directory);
-      }
+    for (String directory : directories) {
+      command.addArgument("/directory:" + directory);
     }
     
     int exitCode = CommandExecutor.create().execute(

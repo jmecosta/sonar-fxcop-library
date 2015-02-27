@@ -61,7 +61,7 @@ public class FxCopSensorTest {
     Project project = mock(Project.class);
 
     FxCopSensor sensor = new FxCopSensor(
-      new FxCopConfiguration("", "foo-fxcop", "", "", "", "", ""),
+      new FxCopConfiguration("", "foo-fxcop", "", "", "", "", "", ""),
       settings, profile, fileSystem, perspectives);
 
     when(fileSystem.files(Mockito.any(FileQuery.class))).thenReturn(ImmutableList.<File>of());
@@ -163,7 +163,7 @@ public class FxCopSensorTest {
     sensor.analyse(context, fileProvider, writer, parser, executor);
 
     verify(writer).write(ImmutableList.of("CA0000", "CA1000", "CR1000"), new File(workingDir, "fxcop-sonarqube.ruleset"));
-    verify(executor).execute("FxCopCmd.exe", "MyLibrary.dll", new File(workingDir, "fxcop-sonarqube.ruleset"), new File(workingDir, "fxcop-report.xml"), 42, true, "c:\\assemblyDependencyDirectories 1,c:\\assemblyDependencyDirectories 2");
+    verify(executor).execute("FxCopCmd.exe", "MyLibrary.dll", new File(workingDir, "fxcop-sonarqube.ruleset"), new File(workingDir, "fxcop-report.xml"), 42, true,
       ImmutableList.of("c:/", "d:/"), ImmutableList.<String>of());
 
     verify(issuable).addIssue(issue1);
@@ -187,7 +187,7 @@ public class FxCopSensorTest {
   public void check_properties() {
     thrown.expectMessage("fooAssemblyKey");
 
-    FxCopConfiguration fxCopConf = new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "", "");
+    FxCopConfiguration fxCopConf = new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "", "", "");
     new FxCopSensor(fxCopConf, mock(Settings.class), mock(RulesProfile.class), mock(ModuleFileSystem.class), mock(ResourcePerspectives.class))
       .analyse(mock(Project.class), mock(SensorContext.class));
   }

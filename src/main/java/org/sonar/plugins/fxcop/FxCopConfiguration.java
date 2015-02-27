@@ -39,12 +39,11 @@ public class FxCopConfiguration {
   private final String directoriesPropertyKey;
   private final String referencesPropertyKey;
 
-  public FxCopConfiguration(String languageKey, String repositoryKey, String assemblyPropertyKey, String fxCopCmdPropertyKey, String timeoutPropertyKey, String aspnetPropertyKey, String directoryPropertyKey) {
-    String directoriesPropertyKey, String referencesPropertyKey) {
+  public FxCopConfiguration(String languageKey, String repositoryKey, String assemblyPropertyKey, String fxCopCmdPropertyKey, String timeoutPropertyKey, String aspnetPropertyKey, String directoriesPropertyKey, String referencesPropertyKey) {
     this.languageKey = languageKey;
     this.repositoryKey = repositoryKey;
     this.assemblyPropertyKey = assemblyPropertyKey;
-    this.directoryPropertyKey = directoryPropertyKey;
+    this.directoryPropertyKey = directoriesPropertyKey;
     this.fxCopCmdPropertyKey = fxCopCmdPropertyKey;
     this.timeoutPropertyKey = timeoutPropertyKey;
     this.aspnetPropertyKey = aspnetPropertyKey;
@@ -117,6 +116,8 @@ public class FxCopConfiguration {
         pdbFile.isFile(),
         "Cannot find the .pdb file \"" + pdbFile.getAbsolutePath() + "\" inferred from the property \"" + assemblyPropertyKey + "\".");
     }
+  }
+  
   private static String pdbPath(String assemblyPath) {
     int i = assemblyPath.lastIndexOf('.');
     if (i == -1) {

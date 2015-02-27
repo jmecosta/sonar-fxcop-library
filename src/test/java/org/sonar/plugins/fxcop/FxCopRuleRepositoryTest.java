@@ -19,37 +19,20 @@
  */
 package org.sonar.plugins.fxcop;
 
-import java.util.List;
-
-import static org.fest.assertions.Assertions.assertThat;
 import org.junit.Test;
-import org.sonar.api.config.Settings;
 import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.XMLRuleParser;
 import org.sonar.check.Cardinality;
 
+import java.util.List;
+
+import static org.fest.assertions.Assertions.assertThat;
+
 public class FxCopRuleRepositoryTest {
 
-  private static final String FXCOP_CUSTOM_RULES_PROPERTY_KEY = "sonar.cs.fxcop.customRules";
-  
-  String profile = "<?xml version=\"1.0\" encoding=\"ASCII\"?>\n" +
-          "<rules>\n" +
-          "    <rule key=\"readability/nolint-0\">\n" +
-          "        <name><![CDATA[ Unknown NOLINT error category: %s  % category]]></name>\n" +
-          "        <configKey><![CDATA[readability/nolint-0@CPP_LINT]]></configKey>\n" +
-          "        <category name=\"readability\" />\n" +
-          "        <description><![CDATA[  Unknown NOLINT error category: %s  % category ]]></description>\n" +
-          "    </rule>\n" +
-          "    <rule key=\"readability/fn_size-0\">\n" +
-          "        <name>name</name>\n" +
-          "        <configKey>key</configKey>\n" +
-          "        <category name=\"readability\" />\n" +
-          "        <description>descr</description>\n" +
-          "    </rule></rules>";
-  
   @Test
   public void test_cs() {
-    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("cs", "cs-fxcop", "", "", "", "", ""), new XMLRuleParser());
+    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("cs", "cs-fxcop", "", "", "", "", "", ""), new XMLRuleParser());
     assertThat(repo.getLanguage()).isEqualTo("cs");
     assertThat(repo.getKey()).isEqualTo("cs-fxcop");
 
@@ -66,7 +49,7 @@ public class FxCopRuleRepositoryTest {
 
   @Test
   public void test_vbnet() {
-    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("vbnet", "vbnet-fxcop", "", "", "", "", ""), new XMLRuleParser());
+    FxCopRuleRepository repo = new FxCopRuleRepository(new FxCopConfiguration("vbnet", "vbnet-fxcop", "", "", "", "", "", ""), new XMLRuleParser());
     assertThat(repo.getLanguage()).isEqualTo("vbnet");
     assertThat(repo.getKey()).isEqualTo("vbnet-fxcop");
 

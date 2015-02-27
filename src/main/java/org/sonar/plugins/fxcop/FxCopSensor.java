@@ -97,7 +97,7 @@ public class FxCopSensor implements Sensor {
     File reportFile = new File(fileSystem.workingDir(), "fxcop-report.xml");
 
     executor.execute(settings.getString(fxCopConf.fxCopCmdPropertyKey()), settings.getString(fxCopConf.assemblyPropertyKey()),
-      rulesetFile, reportFile, settings.getInt(fxCopConf.timeoutPropertyKey()), settings.getBoolean(fxCopConf.aspnetPropertyKey()), settings.getString(fxCopConf.directoryPropertyKey()));
+      rulesetFile, reportFile, settings.getInt(fxCopConf.timeoutPropertyKey()), settings.getBoolean(fxCopConf.aspnetPropertyKey()),
       splitOnCommas(settings.getString(fxCopConf.directoriesPropertyKey())), splitOnCommas(settings.getString(fxCopConf.referencesPropertyKey())));
 
     for (FxCopIssue issue : parser.parse(reportFile)) {
