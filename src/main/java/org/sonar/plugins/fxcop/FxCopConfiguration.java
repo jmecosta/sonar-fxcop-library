@@ -36,8 +36,11 @@ public class FxCopConfiguration {
   private String fxCopCmdPropertyKey;
   private String timeoutPropertyKey;
   private final String aspnetPropertyKey;
+  private final String directoriesPropertyKey;
+  private final String referencesPropertyKey;
 
   public FxCopConfiguration(String languageKey, String repositoryKey, String assemblyPropertyKey, String fxCopCmdPropertyKey, String timeoutPropertyKey, String aspnetPropertyKey, String directoryPropertyKey) {
+    String directoriesPropertyKey, String referencesPropertyKey) {
     this.languageKey = languageKey;
     this.repositoryKey = repositoryKey;
     this.assemblyPropertyKey = assemblyPropertyKey;
@@ -45,6 +48,8 @@ public class FxCopConfiguration {
     this.fxCopCmdPropertyKey = fxCopCmdPropertyKey;
     this.timeoutPropertyKey = timeoutPropertyKey;
     this.aspnetPropertyKey = aspnetPropertyKey;
+    this.directoriesPropertyKey = directoriesPropertyKey;
+    this.referencesPropertyKey = referencesPropertyKey;
   }
 
   public String languageKey() {
@@ -75,6 +80,14 @@ public class FxCopConfiguration {
     return aspnetPropertyKey;
   }
 
+  public String directoriesPropertyKey() {
+    return directoriesPropertyKey;
+  }
+
+  public String referencesPropertyKey() {
+    return referencesPropertyKey;
+  }
+
   public void checkProperties(Settings settings) {
     checkMandatoryProperties(settings);
     checkAssemblyProperty(settings);
@@ -85,7 +98,8 @@ public class FxCopConfiguration {
   private void checkMandatoryProperties(Settings settings) {
     if (!settings.hasKey(assemblyPropertyKey)) {
       throw new IllegalArgumentException("The property \"" + assemblyPropertyKey + "\" must be set and the project must have been built to execute FxCop rules. "
-        + "This property can be automatically set by the Analysis Bootstrapper for Visual Studio Projects plugin, see: http://docs.codehaus.org/x/TAA1Dg");
+        + "This property can be automatically set by the Analysis Bootstrapper for Visual Studio Projects plugin, see: http://docs.codehaus.org/x/TAA1Dg."
+        + "If you wish to skip the analysis of not built projects, set the property \"sonar.visualstudio.skipIfNotBuilt\".");
     }
   }
 

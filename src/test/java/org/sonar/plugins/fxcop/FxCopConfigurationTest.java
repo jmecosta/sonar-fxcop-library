@@ -38,6 +38,7 @@ public class FxCopConfigurationTest {
   @Test
   public void test() {
     FxCopConfiguration fxCopConf = new FxCopConfiguration("cs", "cs-fxcop", "fooAssemblyKey", "fooFxCopCmdPathKey", "fooTimeoutKey", "fooAspnetKey", "fooDirectoryPropertyKey");
+      "fooReferencesKey");
     assertThat(fxCopConf.languageKey()).isEqualTo("cs");
     assertThat(fxCopConf.repositoryKey()).isEqualTo("cs-fxcop");
     assertThat(fxCopConf.assemblyPropertyKey()).isEqualTo("fooAssemblyKey");
@@ -45,6 +46,8 @@ public class FxCopConfigurationTest {
     assertThat(fxCopConf.fxCopCmdPropertyKey()).isEqualTo("fooFxCopCmdPathKey");
     assertThat(fxCopConf.timeoutPropertyKey()).isEqualTo("fooTimeoutKey");
     assertThat(fxCopConf.aspnetPropertyKey()).isEqualTo("fooAspnetKey");
+    assertThat(fxCopConf.directoriesPropertyKey()).isEqualTo("fooDirectoriesKey");
+    assertThat(fxCopConf.referencesPropertyKey()).isEqualTo("fooReferencesKey");
 
     fxCopConf = new FxCopConfiguration("vbnet", "vbnet-fxcop", "barAssemblyKey", "barFxCopCmdPathKey", "barTimeoutKey", "barAspnetKey", "barDirectoryPropertyKey");
     assertThat(fxCopConf.languageKey()).isEqualTo("vbnet");
@@ -54,6 +57,8 @@ public class FxCopConfigurationTest {
     assertThat(fxCopConf.fxCopCmdPropertyKey()).isEqualTo("barFxCopCmdPathKey");
     assertThat(fxCopConf.timeoutPropertyKey()).isEqualTo("barTimeoutKey");
     assertThat(fxCopConf.aspnetPropertyKey()).isEqualTo("barAspnetKey");
+    assertThat(fxCopConf.directoriesPropertyKey()).isEqualTo("barDirectoriesKey");
+    assertThat(fxCopConf.referencesPropertyKey()).isEqualTo("barReferencesKey");
   }
 
   @Test
@@ -94,6 +99,7 @@ public class FxCopConfigurationTest {
     thrown.expect(IllegalArgumentException.class);
     thrown.expectMessage("The property \"fooAssemblyKey\" must be set and the project must have been built to execute FxCop rules.");
     thrown.expectMessage("http://docs.codehaus.org/x/TAA1Dg");
+    thrown.expectMessage("sonar.visualstudio.skipIfNotBuilt");
 
     Settings settings = mock(Settings.class);
     when(settings.hasKey("fooAssemblyKey")).thenReturn(false);

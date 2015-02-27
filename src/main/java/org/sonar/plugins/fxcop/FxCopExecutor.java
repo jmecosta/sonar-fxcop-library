@@ -26,6 +26,7 @@ import org.sonar.api.utils.command.Command;
 import org.sonar.api.utils.command.CommandExecutor;
 
 import java.io.File;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class FxCopExecutor {
@@ -40,8 +41,16 @@ public class FxCopExecutor {
       .addArgument("/outxsl:none")
       .addArgument("/forceoutput")
       .addArgument("/searchgac");
+
     if (aspnet) {
       command.addArgument("/aspnet");
+    }
+
+    for (String directory : directories) {
+      command.addArgument("/directory:" + directory);
+    }
+    for (String reference : references) {
+      command.addArgument("/reference:" + reference);
     }
     
     for (String assembly : assemblies.split(",")) {

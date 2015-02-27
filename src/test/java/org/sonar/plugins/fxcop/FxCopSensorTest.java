@@ -91,6 +91,8 @@ public class FxCopSensorTest {
     when(fxCopConf.fxCopCmdPropertyKey()).thenReturn("fxcopcmdPath");
     when(fxCopConf.timeoutPropertyKey()).thenReturn("timeout");
     when(fxCopConf.aspnetPropertyKey()).thenReturn("aspnet");
+    when(fxCopConf.directoriesPropertyKey()).thenReturn("directories");
+    when(fxCopConf.referencesPropertyKey()).thenReturn("references");
 
     FxCopSensor sensor = new FxCopSensor(
       fxCopConf,
@@ -113,6 +115,8 @@ public class FxCopSensorTest {
     when(settings.getString("fxcopcmdPath")).thenReturn("FxCopCmd.exe");
     when(settings.getInt("timeout")).thenReturn(42);
     when(settings.getBoolean("aspnet")).thenReturn(true);
+    when(settings.getString("directories")).thenReturn(" c:/,,  d:/ ");
+    when(settings.getString("references")).thenReturn(null);
 
     org.sonar.api.resources.File fooSonarFileWithIssuable = mockSonarFile("foo");
     org.sonar.api.resources.File fooSonarFileWithoutIssuable = mockSonarFile("foo");
@@ -160,6 +164,7 @@ public class FxCopSensorTest {
 
     verify(writer).write(ImmutableList.of("CA0000", "CA1000", "CR1000"), new File(workingDir, "fxcop-sonarqube.ruleset"));
     verify(executor).execute("FxCopCmd.exe", "MyLibrary.dll", new File(workingDir, "fxcop-sonarqube.ruleset"), new File(workingDir, "fxcop-report.xml"), 42, true, "c:\\assemblyDependencyDirectories 1,c:\\assemblyDependencyDirectories 2");
+      ImmutableList.of("c:/", "d:/"), ImmutableList.<String>of());
 
     verify(issuable).addIssue(issue1);
     verify(issuable).addIssue(issue2);
