@@ -38,8 +38,11 @@ public class FxCopConfiguration {
   private final String aspnetPropertyKey;
   private final String directoriesPropertyKey;
   private final String referencesPropertyKey;
+  private final String reportPathPropertyKey;
 
-  public FxCopConfiguration(String languageKey, String repositoryKey, String assemblyPropertyKey, String fxCopCmdPropertyKey, String timeoutPropertyKey, String aspnetPropertyKey, String directoriesPropertyKey, String referencesPropertyKey) {
+  public FxCopConfiguration(String languageKey, String repositoryKey, String assemblyPropertyKey, String fxCopCmdPropertyKey, String timeoutPropertyKey, String aspnetPropertyKey,
+    String directoriesPropertyKey, String referencesPropertyKey,
+    String reportPathPropertyKey) {
     this.languageKey = languageKey;
     this.repositoryKey = repositoryKey;
     this.assemblyPropertyKey = assemblyPropertyKey;
@@ -49,6 +52,7 @@ public class FxCopConfiguration {
     this.aspnetPropertyKey = aspnetPropertyKey;
     this.directoriesPropertyKey = directoriesPropertyKey;
     this.referencesPropertyKey = referencesPropertyKey;
+    this.reportPathPropertyKey = reportPathPropertyKey;
   }
 
   public String languageKey() {
@@ -87,11 +91,19 @@ public class FxCopConfiguration {
     return referencesPropertyKey;
   }
 
+  public String reportPathPropertyKey() {
+    return reportPathPropertyKey;
+  }
+
   public void checkProperties(Settings settings) {
-    checkMandatoryProperties(settings);
-    checkAssemblyProperty(settings);
-    checkFxCopCmdPathProperty(settings);
-    checkTimeoutProeprty(settings);
+    if (settings.hasKey(reportPathPropertyKey)) {
+      checkReportPathProperty(settings);
+    } else {
+      checkMandatoryProperties(settings);
+      checkAssemblyProperty(settings);
+      checkFxCopCmdPathProperty(settings);
+      checkTimeoutProeprty(settings);
+    }
   }
 
   private void checkMandatoryProperties(Settings settings) {
@@ -144,6 +156,13 @@ public class FxCopConfiguration {
     if (!settings.hasKey(timeoutPropertyKey) && settings.hasKey(DEPRECATED_TIMEOUT_MINUTES_PROPERTY_KEY)) {
       timeoutPropertyKey = DEPRECATED_TIMEOUT_MINUTES_PROPERTY_KEY;
     }
+  }
+
+  private void checkReportPathProperty(Settings settings) {
+    File file = new File(settings.getString(reportPathPropertyKey));
+    Preconditions.checkArgument(
+      file.isFile(),
+      "Cannot find the FxCop report \"" + file.getAbsolutePath() + "\" provided by the property \"" + reportPathPropertyKey + "\".");
   }
 
 }

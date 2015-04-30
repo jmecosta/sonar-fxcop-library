@@ -27,6 +27,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.Sensor;
 import org.sonar.api.batch.SensorContext;
+import org.sonar.api.batch.fs.FileSystem;
+import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.fs.InputFile.Type;
 import org.sonar.api.component.ResourcePerspectives;
 import org.sonar.api.config.Settings;
 import org.sonar.api.issue.Issuable;
@@ -34,8 +37,6 @@ import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Project;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
-import org.sonar.api.scan.filesystem.FileQuery;
-import org.sonar.api.scan.filesystem.ModuleFileSystem;
 
 import javax.annotation.Nullable;
 
@@ -51,14 +52,14 @@ public class FxCopSensor implements Sensor {
   private final FxCopConfiguration fxCopConf;
   private final Settings settings;
   private final RulesProfile profile;
-  private final ModuleFileSystem fileSystem;
+  private final FileSystem fs;
   private final ResourcePerspectives perspectives;
 
-  public FxCopSensor(FxCopConfiguration fxCopConf, Settings settings, RulesProfile profile, ModuleFileSystem fileSystem, ResourcePerspectives perspectives) {
+  public FxCopSensor(FxCopConfiguration fxCopConf, Settings settings, RulesProfile profile, FileSystem fs, ResourcePerspectives perspectives) {
     this.fxCopConf = fxCopConf;
     this.settings = settings;
     this.profile = profile;
-    this.fileSystem = fileSystem;
+    this.fs = fs;
     this.perspectives = perspectives;
   }
 
@@ -79,26 +80,33 @@ public class FxCopSensor implements Sensor {
   }
 
   private boolean hasFilesToAnalyze() {
-    return !fileSystem.files(FileQuery.onSource().onLanguage(fxCopConf.languageKey())).isEmpty();
+    return fs.files(fs.predicates().and(fs.predicates().hasLanguage(fxCopConf.languageKey()), fs.predicates().hasType(Type.MAIN))).iterator().hasNext();
   }
 
   @Override
   public void analyse(Project project, SensorContext context) {
-    analyse(context, new FileProvider(project, context), new FxCopRulesetWriter(), new FxCopReportParser(), new FxCopExecutor());
+    analyse(context, new FxCopRulesetWriter(), new FxCopReportParser(), new FxCopExecutor());
   }
 
   @VisibleForTesting
-  void analyse(SensorContext context, FileProvider fileProvider, FxCopRulesetWriter writer, FxCopReportParser parser, FxCopExecutor executor) {
+  void analyse(SensorContext context, FxCopRulesetWriter writer, FxCopReportParser parser, FxCopExecutor executor) {
     fxCopConf.checkProperties(settings);
 
-    File rulesetFile = new File(fileSystem.workingDir(), "fxcop-sonarqube.ruleset");
-    writer.write(enabledRuleConfigKeys(), rulesetFile);
+    File reportFile;
+    String reportPath = settings.getString(fxCopConf.reportPathPropertyKey());
+    if (reportPath == null) {
+      File rulesetFile = new File(fs.workDir(), "fxcop-sonarqube.ruleset");
+      writer.write(enabledRuleConfigKeys(), rulesetFile);
 
-    File reportFile = new File(fileSystem.workingDir(), "fxcop-report.xml");
+      reportFile = new File(fs.workDir(), "fxcop-report.xml");
 
-    executor.execute(settings.getString(fxCopConf.fxCopCmdPropertyKey()), settings.getString(fxCopConf.assemblyPropertyKey()),
-      rulesetFile, reportFile, settings.getInt(fxCopConf.timeoutPropertyKey()), settings.getBoolean(fxCopConf.aspnetPropertyKey()),
-      splitOnCommas(settings.getString(fxCopConf.directoriesPropertyKey())), splitOnCommas(settings.getString(fxCopConf.referencesPropertyKey())));
+      executor.execute(settings.getString(fxCopConf.fxCopCmdPropertyKey()), settings.getString(fxCopConf.assemblyPropertyKey()),
+        rulesetFile, reportFile, settings.getInt(fxCopConf.timeoutPropertyKey()), settings.getBoolean(fxCopConf.aspnetPropertyKey()),
+        splitOnCommas(settings.getString(fxCopConf.directoriesPropertyKey())), splitOnCommas(settings.getString(fxCopConf.referencesPropertyKey())));
+    } else {
+      LOG.debug("Using the provided FxCop report" + reportPath);
+      reportFile = new File(reportPath);
+    }
 
     for (FxCopIssue issue : parser.parse(reportFile)) {
       if (!hasFileAndLine(issue)) {
@@ -107,11 +115,11 @@ public class FxCopSensor implements Sensor {
       }
 
       File file = new File(new File(issue.path()), issue.file());
-      org.sonar.api.resources.File sonarFile = fileProvider.fromIOFile(file);
-      if (sonarFile == null) {
+      InputFile inputFile = fs.inputFile(fs.predicates().and(fs.predicates().hasType(Type.MAIN), fs.predicates().hasAbsolutePath(file.getAbsolutePath())));
+      if (inputFile == null) {
         logSkippedIssueOutsideOfSonarQube(issue, file);
       } else {
-        Issuable issuable = perspectives.as(Issuable.class, sonarFile);
+        Issuable issuable = perspectives.as(Issuable.class, inputFile);
         if (issuable == null) {
           logSkippedIssueOutsideOfSonarQube(issue, file);
         } else {

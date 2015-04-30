@@ -25,18 +25,21 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.sonar.api.batch.SensorContext;
+import org.sonar.api.batch.fs.FilePredicate;
+import org.sonar.api.batch.fs.FileSystem;
+import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.fs.InputFile.Type;
+import org.sonar.api.batch.fs.internal.DefaultFileSystem;
+import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.component.ResourcePerspectives;
 import org.sonar.api.config.Settings;
 import org.sonar.api.issue.Issuable;
 import org.sonar.api.issue.Issuable.IssueBuilder;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.profiles.RulesProfile;
-import org.sonar.api.resources.Language;
 import org.sonar.api.resources.Project;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
-import org.sonar.api.scan.filesystem.FileQuery;
-import org.sonar.api.scan.filesystem.ModuleFileSystem;
 
 import java.io.File;
 import java.util.List;
@@ -55,23 +58,26 @@ public class FxCopSensorTest {
   public void shouldExecuteOnProject() {
     Settings settings = mock(Settings.class);
     RulesProfile profile = mock(RulesProfile.class);
-    ModuleFileSystem fileSystem = mock(ModuleFileSystem.class);
+    DefaultFileSystem fs = new DefaultFileSystem();
     ResourcePerspectives perspectives = mock(ResourcePerspectives.class);
 
     Project project = mock(Project.class);
 
     FxCopSensor sensor = new FxCopSensor(
-      new FxCopConfiguration("", "foo-fxcop", "", "", "", "", "", ""),
-      settings, profile, fileSystem, perspectives);
+      new FxCopConfiguration("foo", "foo-fxcop", "", "", "", "", "", "", ""),
+      settings, profile, fs, perspectives);
 
-    when(fileSystem.files(Mockito.any(FileQuery.class))).thenReturn(ImmutableList.<File>of());
     assertThat(sensor.shouldExecuteOnProject(project)).isFalse();
 
-    when(fileSystem.files(Mockito.any(FileQuery.class))).thenReturn(ImmutableList.of(mock(File.class)));
+    fs.add(new DefaultInputFile("bar").setAbsolutePath("bar").setLanguage("bar"));
+    assertThat(sensor.shouldExecuteOnProject(project)).isFalse();
+
+    fs.add(new DefaultInputFile("foo").setAbsolutePath("foo").setLanguage("foo"));
+    assertThat(sensor.shouldExecuteOnProject(project)).isFalse();
+
     when(profile.getActiveRulesByRepository("foo-fxcop")).thenReturn(ImmutableList.<ActiveRule>of());
     assertThat(sensor.shouldExecuteOnProject(project)).isFalse();
 
-    when(fileSystem.files(Mockito.any(FileQuery.class))).thenReturn(ImmutableList.of(mock(File.class)));
     when(profile.getActiveRulesByRepository("foo-fxcop")).thenReturn(ImmutableList.of(mock(ActiveRule.class)));
     assertThat(sensor.shouldExecuteOnProject(project)).isTrue();
   }
@@ -80,7 +86,7 @@ public class FxCopSensorTest {
   public void analyze() throws Exception {
     Settings settings = mock(Settings.class);
     RulesProfile profile = mock(RulesProfile.class);
-    ModuleFileSystem fileSystem = mock(ModuleFileSystem.class);
+    DefaultFileSystem fs = new DefaultFileSystem();
     ResourcePerspectives perspectives = mock(ResourcePerspectives.class);
 
     FxCopConfiguration fxCopConf = mock(FxCopConfiguration.class);
@@ -96,7 +102,7 @@ public class FxCopSensorTest {
 
     FxCopSensor sensor = new FxCopSensor(
       fxCopConf,
-      settings, profile, fileSystem, perspectives);
+      settings, profile, fs, perspectives);
     when(settings.hasKey("assemblyKey")).thenReturn(true);
     when(settings.hasKey("fxcopcmdPath")).thenReturn(true);
 
@@ -104,11 +110,10 @@ public class FxCopSensorTest {
     when(profile.getActiveRulesByRepository("foo-fxcop")).thenReturn(activeRules);
 
     SensorContext context = mock(SensorContext.class);
-    FileProvider fileProvider = mock(FileProvider.class);
     FxCopExecutor executor = mock(FxCopExecutor.class);
 
-    File workingDir = new File("target/FxCopSensorTest/working-dir");
-    when(fileSystem.workingDir()).thenReturn(workingDir);
+    File workingDir = new File(new File("target/FxCopSensorTest/working-dir").getAbsolutePath());
+    fs.setWorkDir(workingDir);
 
     when(settings.getString("assemblyKey")).thenReturn("MyLibrary.dll");
     when(settings.getString("directoryKey")).thenReturn("c:\\assemblyDependencyDirectories 1,c:\\assemblyDependencyDirectories 2");
@@ -118,16 +123,17 @@ public class FxCopSensorTest {
     when(settings.getString("directories")).thenReturn(" c:/,,  d:/ ");
     when(settings.getString("references")).thenReturn(null);
 
-    org.sonar.api.resources.File fooSonarFileWithIssuable = mockSonarFile("foo");
-    org.sonar.api.resources.File fooSonarFileWithoutIssuable = mockSonarFile("foo");
-    org.sonar.api.resources.File barSonarFile = mockSonarFile("bar");
+    InputFile class5InputFile = new DefaultInputFile("Class5.cs").setAbsolutePath(new File(new File("basePath"), "Class5.cs").getAbsolutePath()).setLanguage("foo");
+    InputFile class6InputFile = new DefaultInputFile("Class6.cs").setAbsolutePath(new File(new File("basePath"), "Class6.cs").getAbsolutePath()).setLanguage("foo");
+    InputFile class7InputFile = new DefaultInputFile("Class7.cs").setAbsolutePath(new File(new File("basePath"), "Class7.cs").getAbsolutePath()).setLanguage("foo");
+    InputFile class8InputFile = new DefaultInputFile("Class8.cs").setAbsolutePath(new File(new File("basePath"), "Class8.cs").getAbsolutePath()).setLanguage("bar");
+    InputFile class9InputFile = new DefaultInputFile("Class9.cs").setAbsolutePath(new File(new File("basePath"), "Class9.cs").getAbsolutePath()).setLanguage("foo");
 
-    when(fileProvider.fromIOFile(new File(new File("basePath"), "Class4.cs"))).thenReturn(null);
-    when(fileProvider.fromIOFile(new File(new File("basePath"), "Class5.cs"))).thenReturn(fooSonarFileWithIssuable);
-    when(fileProvider.fromIOFile(new File(new File("basePath"), "Class6.cs"))).thenReturn(fooSonarFileWithIssuable);
-    when(fileProvider.fromIOFile(new File(new File("basePath"), "Class7.cs"))).thenReturn(fooSonarFileWithoutIssuable);
-    when(fileProvider.fromIOFile(new File(new File("basePath"), "Class8.cs"))).thenReturn(barSonarFile);
-    when(fileProvider.fromIOFile(new File(new File("basePath"), "Class9.cs"))).thenReturn(fooSonarFileWithIssuable);
+    fs.add(class5InputFile);
+    fs.add(class6InputFile);
+    fs.add(class7InputFile);
+    fs.add(class8InputFile);
+    fs.add(class9InputFile);
 
     Issue issue1 = mock(Issue.class);
     IssueBuilder issueBuilder1 = mockIssueBuilder();
@@ -142,7 +148,9 @@ public class FxCopSensorTest {
     when(issueBuilder3.build()).thenReturn(issue3);
 
     Issuable issuable = mock(Issuable.class);
-    when(perspectives.as(Issuable.class, fooSonarFileWithIssuable)).thenReturn(issuable);
+    when(perspectives.as(Issuable.class, class5InputFile)).thenReturn(issuable);
+    when(perspectives.as(Issuable.class, class6InputFile)).thenReturn(issuable);
+    when(perspectives.as(Issuable.class, class9InputFile)).thenReturn(issuable);
     when(issuable.newIssueBuilder()).thenReturn(issueBuilder1, issueBuilder2, issueBuilder3);
 
     FxCopRulesetWriter writer = mock(FxCopRulesetWriter.class);
@@ -160,7 +168,7 @@ public class FxCopSensorTest {
         new FxCopIssue(800, "CA0000", "basePath", "Class8.cs", 8, "Fifth message"),
         new FxCopIssue(800, "CR1000", "basePath", "Class9.cs", 9, "Sixth message")));
 
-    sensor.analyse(context, fileProvider, writer, parser, executor);
+    sensor.analyse(context, writer, parser, executor);
 
     verify(writer).write(ImmutableList.of("CA0000", "CA1000", "CR1000"), new File(workingDir, "fxcop-sonarqube.ruleset"));
     verify(executor).execute("FxCopCmd.exe", "MyLibrary.dll", new File(workingDir, "fxcop-sonarqube.ruleset"), new File(workingDir, "fxcop-report.xml"), 42, true,
@@ -184,20 +192,48 @@ public class FxCopSensorTest {
   }
 
   @Test
+  public void analyze_with_report() {
+    Settings settings = new Settings();
+    RulesProfile profile = mock(RulesProfile.class);
+    FileSystem fs = mock(FileSystem.class);
+    ResourcePerspectives perspectives = mock(ResourcePerspectives.class);
+
+    FxCopConfiguration fxCopConf = mock(FxCopConfiguration.class);
+    when(fxCopConf.repositoryKey()).thenReturn("foo-fxcop");
+    when(fxCopConf.reportPathPropertyKey()).thenReturn("reportPath");
+
+    FxCopSensor sensor = new FxCopSensor(
+      fxCopConf,
+      settings, profile, fs, perspectives);
+
+    File reportFile = new File("src/test/resources/FxCopSensorTest/fxcop-report.xml");
+    settings.setProperty("reportPath", reportFile.getAbsolutePath());
+
+    SensorContext context = mock(SensorContext.class);
+    FxCopRulesetWriter writer = mock(FxCopRulesetWriter.class);
+    FxCopReportParser parser = mock(FxCopReportParser.class);
+    FxCopExecutor executor = mock(FxCopExecutor.class);
+
+    sensor.analyse(context, writer, parser, executor);
+
+    verify(writer, Mockito.never()).write(Mockito.anyList(), Mockito.any(File.class));
+    verify(executor, Mockito.never()).execute(
+      Mockito.anyString(), Mockito.anyString(), Mockito.any(File.class), Mockito.any(File.class), Mockito.anyInt(), Mockito.anyBoolean(), Mockito.anyList(), Mockito.anyList());
+
+    verify(parser).parse(new File(reportFile.getAbsolutePath()));
+  }
+
+  @Test
   public void check_properties() {
     thrown.expectMessage("fooAssemblyKey");
 
-    FxCopConfiguration fxCopConf = new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "", "", "");
-    new FxCopSensor(fxCopConf, mock(Settings.class), mock(RulesProfile.class), mock(ModuleFileSystem.class), mock(ResourcePerspectives.class))
+    FxCopConfiguration fxCopConf = new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "", "", "", "");
+    new FxCopSensor(fxCopConf, mock(Settings.class), mock(RulesProfile.class), mock(FileSystem.class), mock(ResourcePerspectives.class))
       .analyse(mock(Project.class), mock(SensorContext.class));
   }
 
-  private static org.sonar.api.resources.File mockSonarFile(String languageKey) {
-    Language language = mock(Language.class);
-    when(language.getKey()).thenReturn(languageKey);
-    org.sonar.api.resources.File sonarFile = mock(org.sonar.api.resources.File.class);
-    when(sonarFile.getLanguage()).thenReturn(language);
-    return sonarFile;
+  private static FilePredicate mainWithAbsolutePath(FileSystem fs, File file) {
+    return fs.predicates().and(fs.predicates().hasType(Type.MAIN), fs.predicates().hasAbsolutePath(file.getAbsolutePath()));
   }
 
   private static IssueBuilder mockIssueBuilder() {
