@@ -19,12 +19,12 @@
  */
 package org.sonar.plugins.fxcop;
 
+import java.io.File;
+import java.util.Iterator;
+import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import java.io.File;
-import java.util.List;
 
 import static org.fest.assertions.Assertions.assertThat;
 
@@ -37,9 +37,9 @@ public class FxCopReportParserTest {
   public void valid() {
     List<FxCopIssue> issues = new FxCopReportParser().parse(new File("src/test/resources/FxCopReportParserTest/valid.xml"));
 
-    assertThat(issues).hasSize(5);
+    Iterator<FxCopIssue> it = issues.iterator();
 
-    FxCopIssue issue = issues.get(0);
+    FxCopIssue issue = it.next();
     assertThat(issue.reportLine()).isEqualTo(9);
     assertThat(issue.ruleConfigKey()).isEqualTo("CA2210");
     assertThat(issue.path()).isNull();
@@ -47,13 +47,25 @@ public class FxCopReportParserTest {
     assertThat(issue.line()).isNull();
     assertThat(issue.message()).isEqualTo("Sign 'MyLibrary.dll' with a strong name key.");
 
-    issue = issues.get(2);
+    issue = it.next();
+    assertThat(issue.reportLine()).isEqualTo(12);
+    assertThat(issue.ruleConfigKey()).isEqualTo("CA1014");
+
+    issue = it.next();
     assertThat(issue.reportLine()).isEqualTo(23);
     assertThat(issue.ruleConfigKey()).isEqualTo("CA1704");
     assertThat(issue.path()).isEqualTo("c:\\Users\\SonarSource\\Documents\\Visual Studio 2013\\Projects\\CSharpPlayground\\MyLibrary");
     assertThat(issue.file()).isEqualTo("Class1.cs");
     assertThat(issue.line()).isEqualTo(12);
     assertThat(issue.message()).isEqualTo("In method 'Class1.Add(int, int)', consider providing a more meaningful name than parameter name 'a'.");
+
+    issue = it.next();
+    assertThat(issue.reportLine()).isEqualTo(26);
+    assertThat(issue.ruleConfigKey()).isEqualTo("CA1704");
+
+    // issue on line 29 is suppressed
+
+    assertThat(it.hasNext()).isFalse();
   }
 
   @Test

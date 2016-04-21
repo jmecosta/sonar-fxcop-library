@@ -23,18 +23,16 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closeables;
-
-import javax.annotation.Nullable;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamConstants;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
+import javax.annotation.Nullable;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 public class FxCopReportParser {
 
@@ -48,6 +46,7 @@ public class FxCopReportParser {
     private XMLStreamReader stream;
     private final ImmutableList.Builder<FxCopIssue> filesBuilder = ImmutableList.builder();
     private String ruleConfigKey;
+    private boolean isSuppressed = false;
 
     public List<FxCopIssue> parse(File file) {
       this.file = file;
@@ -65,7 +64,7 @@ public class FxCopReportParser {
 
             if ("Message".equals(tagName)) {
               handleMessageTag();
-            } else if ("Issue".equals(tagName)) {
+            } else if (!isSuppressed && "Issue".equals(tagName)) {
               handleIssueTag();
             }
           }
@@ -94,6 +93,7 @@ public class FxCopReportParser {
 
     private void handleMessageTag() {
       this.ruleConfigKey = getRequiredAttribute("CheckId");
+      this.isSuppressed = "ExcludedInSource".equals(getAttribute("Status"));
     }
 
     private void handleIssueTag() throws XMLStreamException {

@@ -25,7 +25,7 @@
             <Message Id="b" TypeName="IdentifiersShouldBeSpelledCorrectly" Category="Microsoft.Naming" CheckId="CA1704" Status="Active" Created="2014-02-26 00:22:14Z" FixCategory="Breaking" BreaksBuild="True">
              <Issue Name="MemberParameterMoreMeaningfulName" Certainty="75" Level="CriticalWarning" Path="c:\Users\SonarSource\Documents\Visual Studio 2013\Projects\CSharpPlayground\MyLibrary" File="Class1.cs" Line="12">In method 'Class1.Add(int, int)', consider providing a more meaningful name than parameter name 'b'.</Issue>
             </Message>
-            <Message TypeName="MarkMembersAsStatic" Category="Microsoft.Performance" CheckId="CA1822" Status="Active" Created="2014-02-26 00:22:14Z" FixCategory="DependsOnFix" BreaksBuild="True">
+            <Message TypeName="MarkMembersAsStatic" Category="Microsoft.Performance" CheckId="CA1822" Status="ExcludedInSource" Created="2014-02-26 00:22:14Z" FixCategory="DependsOnFix" BreaksBuild="True">
              <Issue Certainty="95" Level="Warning" Path="c:\Users\SonarSource\Documents\Visual Studio 2013\Projects\CSharpPlayground\MyLibrary" File="Class1.cs" Line="12">The 'this' parameter (or 'Me' in Visual Basic) of 'Class1.Add(int, int)' is never used. Mark the member as static (or Shared in Visual Basic) or use 'this'/'Me' in the method body or at least one property accessor, if appropriate.</Issue>
             </Message>
            </Messages>
