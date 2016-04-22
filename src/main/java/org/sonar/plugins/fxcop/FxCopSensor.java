@@ -38,6 +38,7 @@ import org.sonar.api.config.Settings;
 import org.sonar.api.issue.Issuable;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Project;
+import org.sonar.api.resources.Resource;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
 
@@ -83,11 +84,11 @@ public class FxCopSensor implements Sensor {
 
   @Override
   public void analyse(Project project, SensorContext context) {
-    analyse(context, new FxCopRulesetWriter(), new FxCopReportParser(), new FxCopExecutor());
+    analyse(context, new FxCopRulesetWriter(), new FxCopReportParser(), new FxCopExecutor(), perspectives.as(Issuable.class, (Resource)project));
   }
 
   @VisibleForTesting
-  void analyse(SensorContext context, FxCopRulesetWriter writer, FxCopReportParser parser, FxCopExecutor executor) {
+  void analyse(SensorContext context, FxCopRulesetWriter writer, FxCopReportParser parser, FxCopExecutor executor, Issuable projectIssuable) {
     fxCopConf.checkProperties(settings);
 
     File reportFile;
@@ -108,27 +109,47 @@ public class FxCopSensor implements Sensor {
 
     for (FxCopIssue issue : parser.parse(reportFile)) {
       if (!hasFileAndLine(issue)) {
-        logSkippedIssue(issue, "which has no associated file.");
+        LOG.info("Skipping the FxCop issue at line " + issue.reportLine() + " which has no associated file.");
         continue;
       }
 
       File file = new File(new File(issue.path()), issue.file());
-      InputFile inputFile = fs.inputFile(fs.predicates().and(fs.predicates().hasType(Type.MAIN), fs.predicates().hasAbsolutePath(file.getAbsolutePath())));
-      if (inputFile == null) {
-        logSkippedIssueOutsideOfSonarQube(issue, file);
-      } else if (fxCopConf.languageKey().equals(inputFile.language())) {
-        Issuable issuable = perspectives.as(Issuable.class, inputFile);
-        if (issuable == null) {
-          logSkippedIssueOutsideOfSonarQube(issue, file);
-        } else {
-          issuable.addIssue(
-            issuable.newIssueBuilder()
-              .ruleKey(RuleKey.of(fxCopConf.repositoryKey(), ruleKey(issue.ruleConfigKey())))
-              .line(fxCopToSonarQubeLine(issue.line()))
-              .message(issue.message())
-              .build());
+      InputFile inputFile = fs.inputFile(fs.predicates().hasAbsolutePath(file.getAbsolutePath()));
+
+      String messageLocation = "";
+      Issuable issuable = null;
+      if (inputFile != null) {
+        issuable = perspectives.as(Issuable.class, inputFile);
+      } else {
+        issuable = projectIssuable;
+
+        if (issue.path() != null) {
+          messageLocation += issue.path() + "\\";
+        }
+        if (issue.file() != null) {
+          messageLocation += issue.file();
+
+          if (issue.line() != null) {
+            messageLocation += ":" + issue.line();
+          }
+        }
+
+        if (!messageLocation.isEmpty()) {
+          messageLocation += ": ";
         }
       }
+
+      if (issuable == null) {
+        LOG.warn("Skipping the FxCop issue at line " + issue.reportLine() + " which has no associated SonarQube issuable.");
+        continue;
+      }
+
+      issuable.addIssue(
+        issuable.newIssueBuilder()
+          .ruleKey(RuleKey.of(fxCopConf.repositoryKey(), ruleKey(issue.ruleConfigKey())))
+          .line(fxCopToSonarQubeLine(issue.line()))
+          .message(messageLocation + issue.message())
+          .build());
     }
   }
 
@@ -151,14 +172,6 @@ public class FxCopSensor implements Sensor {
 
   private static boolean hasFileAndLine(FxCopIssue issue) {
     return issue.path() != null && issue.file() != null && issue.line() != null;
-  }
-
-  private static void logSkippedIssueOutsideOfSonarQube(FxCopIssue issue, File file) {
-    logSkippedIssue(issue, "whose file \"" + file.getAbsolutePath() + "\" is not in SonarQube.");
-  }
-
-  private static void logSkippedIssue(FxCopIssue issue, String reason) {
-    LOG.debug("Skipping the FxCop issue at line " + issue.reportLine() + " " + reason);
   }
 
   private List<String> enabledRuleConfigKeys() {

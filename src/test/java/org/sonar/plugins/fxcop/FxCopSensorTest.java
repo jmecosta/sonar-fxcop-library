@@ -142,28 +142,38 @@ public class FxCopSensorTest {
     IssueBuilder issueBuilder3 = mockIssueBuilder();
     when(issueBuilder3.build()).thenReturn(issue3);
 
+    Issue issue4 = mock(Issue.class);
+    IssueBuilder issueBuilder4 = mockIssueBuilder();
+    when(issueBuilder4.build()).thenReturn(issue4);
+
     Issuable issuable = mock(Issuable.class);
-    when(perspectives.as(Issuable.class, class5InputFile)).thenReturn(issuable);
-    when(perspectives.as(Issuable.class, class6InputFile)).thenReturn(issuable);
-    when(perspectives.as(Issuable.class, class9InputFile)).thenReturn(issuable);
-    when(issuable.newIssueBuilder()).thenReturn(issueBuilder1, issueBuilder2, issueBuilder3);
+    when(perspectives.as(Mockito.eq(Issuable.class), Mockito.any(InputFile.class))).thenReturn(issuable);
+    when(perspectives.as(Issuable.class, class7InputFile)).thenReturn(null);
+    when(issuable.newIssueBuilder()).thenReturn(issueBuilder1, issueBuilder2, issueBuilder3, issueBuilder4);
+
+    Issue projectIssue1 = mock(Issue.class);
+    IssueBuilder projectIssueBuilder1 = mockIssueBuilder();
+    when(projectIssueBuilder1.build()).thenReturn(projectIssue1);
+
+    Issuable projectIssuable = mock(Issuable.class);
+    when(projectIssuable.newIssueBuilder()).thenReturn(projectIssueBuilder1);
 
     FxCopRulesetWriter writer = mock(FxCopRulesetWriter.class);
 
     FxCopReportParser parser = mock(FxCopReportParser.class);
     when(parser.parse(new File(workingDir, "fxcop-report.xml"))).thenReturn(
       ImmutableList.of(
-        new FxCopIssue(100, "CA0000", null, "Class1.cs", 1, "Dummy message"),
-        new FxCopIssue(200, "CA0000", "basePath", null, 2, "Dummy message"),
-        new FxCopIssue(300, "CA0000", "basePath", "Class3.cs", null, "Dummy message"),
-        new FxCopIssue(400, "CA0000", "basePath", "Class4.cs", 4, "First message"),
-        new FxCopIssue(500, "CA0000", "basePath", "Class5.cs", 0, "Second message"),
-        new FxCopIssue(600, "CA1000", "basePath", "Class6.cs", 6, "Third message"),
-        new FxCopIssue(700, "CA0000", "basePath", "Class7.cs", 7, "Fourth message"),
-        new FxCopIssue(800, "CA0000", "basePath", "Class8.cs", 8, "Fifth message"),
-        new FxCopIssue(800, "CR1000", "basePath", "Class9.cs", 9, "Sixth message")));
+        new FxCopIssue(100, "CA0000", null, "Class1.cs", 1, "Dummy message"), // no path
+        new FxCopIssue(200, "CA0000", "basePath", null, 2, "Dummy message"), // no filename
+        new FxCopIssue(300, "CA0000", "basePath", "Class3.cs", null, "Dummy message"), // no line
+        new FxCopIssue(400, "CA0000", "basePath", "Class4.cs", 4, "First message"), // no input file -> on project
+        new FxCopIssue(500, "CA0000", "basePath", "Class5.cs", 0, "Second message"), // all good but line 0 -> on file Class5.cs
+        new FxCopIssue(600, "CA1000", "basePath", "Class6.cs", 6, "Third message"), // all good -> on file+line
+        new FxCopIssue(700, "CA0000", "basePath", "Class7.cs", 7, "Fourth message"), // null issuable but has input file -> skipped
+        new FxCopIssue(800, "CA0000", "basePath", "Class8.cs", 8, "Fifth message"), // language "bar" -> on file+line
+        new FxCopIssue(800, "CR1000", "basePath", "Class9.cs", 9, "Sixth message"))); // all good -> on file+line
 
-    sensor.analyse(context, writer, parser, executor);
+    sensor.analyse(context, writer, parser, executor, projectIssuable);
 
     verify(writer).write(ImmutableList.of("CA0000", "CA1000", "CR1000"), new File(workingDir, "fxcop-sonarqube.ruleset"));
     verify(executor).execute("FxCopCmd.exe", "MyLibrary.dll", new File(workingDir, "fxcop-sonarqube.ruleset"), new File(workingDir, "fxcop-report.xml"), 42, true,
@@ -181,9 +191,19 @@ public class FxCopSensorTest {
     verify(issueBuilder2).line(6);
     verify(issueBuilder2).message("Third message");
 
-    verify(issueBuilder3).ruleKey(RuleKey.of("foo-fxcop", "CustomRuleTemplate_42"));
-    verify(issueBuilder3).line(9);
-    verify(issueBuilder3).message("Sixth message");
+    verify(issueBuilder3).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
+    verify(issueBuilder3).line(8);
+    verify(issueBuilder3).message("Fifth message");
+
+    verify(issueBuilder4).ruleKey(RuleKey.of("foo-fxcop", "CustomRuleTemplate_42"));
+    verify(issueBuilder4).line(9);
+    verify(issueBuilder4).message("Sixth message");
+
+    verify(projectIssuable).addIssue(projectIssue1);
+
+    verify(projectIssueBuilder1).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
+    verify(projectIssueBuilder1).line(4);
+    verify(projectIssueBuilder1).message("basePath\\Class4.cs:4: First message");
   }
 
   @Test
@@ -209,7 +229,7 @@ public class FxCopSensorTest {
     FxCopReportParser parser = mock(FxCopReportParser.class);
     FxCopExecutor executor = mock(FxCopExecutor.class);
 
-    sensor.analyse(context, writer, parser, executor);
+    sensor.analyse(context, writer, parser, executor, mock(Issuable.class));
 
     verify(writer, Mockito.never()).write(Mockito.anyList(), Mockito.any(File.class));
     verify(executor, Mockito.never()).execute(
