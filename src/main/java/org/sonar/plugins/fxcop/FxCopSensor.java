@@ -117,7 +117,7 @@ public class FxCopSensor implements Sensor {
       }
 
       String messageLocation = "";
-      Issuable issuable = null;
+      Issuable issuable;
       boolean isOnProjectIssuable = false;
       if (inputFile != null) {
         issuable = perspectives.as(Issuable.class, inputFile);
