@@ -22,6 +22,8 @@ package org.sonar.plugins.fxcop;
 import com.google.common.collect.ImmutableList;
 import java.io.File;
 import java.util.List;
+import org.apache.commons.lang.SystemUtils;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -53,6 +55,8 @@ public class FxCopSensorTest {
 
   @Test
   public void shouldExecuteOnProject() {
+    Assume.assumeTrue(SystemUtils.IS_OS_WINDOWS);
+
     Settings settings = mock(Settings.class);
     RulesProfile profile = mock(RulesProfile.class);
     DefaultFileSystem fs = new DefaultFileSystem();
