@@ -26,6 +26,7 @@ import java.io.File;
 import java.util.List;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
+import org.apache.commons.lang.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.Sensor;
@@ -71,6 +72,8 @@ public class FxCopSensor implements Sensor {
       shouldExecute = false;
     } else if (profile.getActiveRulesByRepository(fxCopConf.repositoryKey()).isEmpty()) {
       LOG.info("All FxCop rules are disabled, skipping its execution.");
+      shouldExecute = false;
+    } else if (!SystemUtils.IS_OS_WINDOWS) {
       shouldExecute = false;
     } else {
       shouldExecute = true;
