@@ -20,9 +20,8 @@
 package org.sonar.plugins.fxcop;
 
 import com.google.common.base.Preconditions;
-import org.sonar.api.config.Settings;
-
 import java.io.File;
+import org.sonar.api.config.Settings;
 
 public class FxCopConfiguration {
 
@@ -102,9 +101,9 @@ public class FxCopConfiguration {
 
   private void checkMandatoryProperties(Settings settings) {
     if (!settings.hasKey(assemblyPropertyKey)) {
-      throw new IllegalArgumentException("The property \"" + assemblyPropertyKey + "\" must be set and the project must have been built to execute FxCop rules. "
-        + "This property can be automatically set by the Analysis Bootstrapper for Visual Studio Projects plugin, see: http://docs.codehaus.org/x/TAA1Dg."
-        + "If you wish to skip the analysis of not built projects, set the property \"sonar.visualstudio.skipIfNotBuilt\".");
+      throw new IllegalArgumentException("No FxCop analysis has been performed on this project, whereas it contains " + languageKey() + " files: " +
+        "Verify that you are using the latest version of the SonarQube Scanner for MSBuild, and if you do, please report a bug. " +
+        "In the short term, you can disable all FxCop rules from your quality profile to get rid of this error.");
     }
   }
 

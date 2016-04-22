@@ -19,12 +19,11 @@
  */
 package org.sonar.plugins.fxcop;
 
+import java.io.File;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.sonar.api.config.Settings;
-
-import java.io.File;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -89,9 +88,7 @@ public class FxCopConfigurationTest {
   @Test
   public void check_properties_assembly_property_not_set() {
     thrown.expect(IllegalArgumentException.class);
-    thrown.expectMessage("The property \"fooAssemblyKey\" must be set and the project must have been built to execute FxCop rules.");
-    thrown.expectMessage("http://docs.codehaus.org/x/TAA1Dg");
-    thrown.expectMessage("sonar.visualstudio.skipIfNotBuilt");
+    thrown.expectMessage("No FxCop analysis has been performed on this project");
 
     Settings settings = mock(Settings.class);
     when(settings.hasKey("fooAssemblyKey")).thenReturn(false);
