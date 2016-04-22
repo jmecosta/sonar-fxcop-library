@@ -36,6 +36,7 @@ import org.sonar.api.batch.fs.InputFile.Type;
 import org.sonar.api.component.ResourcePerspectives;
 import org.sonar.api.config.Settings;
 import org.sonar.api.issue.Issuable;
+import org.sonar.api.issue.Issuable.IssueBuilder;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Project;
 import org.sonar.api.resources.Resource;
@@ -108,29 +109,27 @@ public class FxCopSensor implements Sensor {
     }
 
     for (FxCopIssue issue : parser.parse(reportFile)) {
-      if (!hasFileAndLine(issue)) {
-        LOG.info("Skipping the FxCop issue at line " + issue.reportLine() + " which has no associated file.");
-        continue;
-      }
+      String absolutePath = getSourceFileAbsolutePath(issue);
 
-      File file = new File(new File(issue.path()), issue.file());
-      InputFile inputFile = fs.inputFile(fs.predicates().hasAbsolutePath(file.getAbsolutePath()));
+      InputFile inputFile = null;
+      if (absolutePath != null) {
+        inputFile = fs.inputFile(fs.predicates().hasAbsolutePath(absolutePath));
+      }
 
       String messageLocation = "";
       Issuable issuable = null;
+      boolean isOnProjectIssuable = false;
       if (inputFile != null) {
         issuable = perspectives.as(Issuable.class, inputFile);
       } else {
         issuable = projectIssuable;
+        isOnProjectIssuable = true;
 
-        if (issue.path() != null) {
-          messageLocation += issue.path() + "\\";
-        }
-        if (issue.file() != null) {
-          messageLocation += issue.file();
+        if (absolutePath != null) {
+          messageLocation += absolutePath;
 
           if (issue.line() != null) {
-            messageLocation += ":" + issue.line();
+            messageLocation += " line " + issue.line();
           }
         }
 
@@ -144,18 +143,22 @@ public class FxCopSensor implements Sensor {
         continue;
       }
 
-      issuable.addIssue(
-        issuable.newIssueBuilder()
-          .ruleKey(RuleKey.of(fxCopConf.repositoryKey(), ruleKey(issue.ruleConfigKey())))
-          .line(fxCopToSonarQubeLine(issue.line()))
-          .message(messageLocation + issue.message())
-          .build());
+      IssueBuilder issueBuilder = issuable.newIssueBuilder()
+        .ruleKey(RuleKey.of(fxCopConf.repositoryKey(), ruleKey(issue.ruleConfigKey())))
+        .message(messageLocation + issue.message());
+
+      Integer line = fxCopToSonarQubeLine(issue.line(), isOnProjectIssuable);
+      if (line != null) {
+        issueBuilder.line(line);
+      }
+
+      issuable.addIssue(issueBuilder.build());
     }
   }
 
   @CheckForNull
-  private static Integer fxCopToSonarQubeLine(@Nullable Integer fxcopLine) {
-    if (fxcopLine == null) {
+  private static Integer fxCopToSonarQubeLine(@Nullable Integer fxcopLine, boolean isOnProjectIssuable) {
+    if (fxcopLine == null || isOnProjectIssuable) {
       return null;
     }
 
@@ -170,8 +173,14 @@ public class FxCopSensor implements Sensor {
     }
   }
 
-  private static boolean hasFileAndLine(FxCopIssue issue) {
-    return issue.path() != null && issue.file() != null && issue.line() != null;
+  @CheckForNull
+  private static String getSourceFileAbsolutePath(FxCopIssue issue) {
+    if (issue.path() == null || issue.file() == null) {
+      return null;
+    }
+
+    File file = new File(new File(issue.path()), issue.file());
+    return file.getAbsolutePath();
   }
 
   private List<String> enabledRuleConfigKeys() {
