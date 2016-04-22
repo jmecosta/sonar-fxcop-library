@@ -157,7 +157,7 @@ public class FxCopSensorTest {
         new FxCopIssue(200, "CA0000", "basePath", null, 2, "Dummy message"),
         new FxCopIssue(300, "CA0000", "basePath", "Class3.cs", null, "Dummy message"),
         new FxCopIssue(400, "CA0000", "basePath", "Class4.cs", 4, "First message"),
-        new FxCopIssue(500, "CA0000", "basePath", "Class5.cs", 5, "Second message"),
+        new FxCopIssue(500, "CA0000", "basePath", "Class5.cs", 0, "Second message"),
         new FxCopIssue(600, "CA1000", "basePath", "Class6.cs", 6, "Third message"),
         new FxCopIssue(700, "CA0000", "basePath", "Class7.cs", 7, "Fourth message"),
         new FxCopIssue(800, "CA0000", "basePath", "Class8.cs", 8, "Fifth message"),
@@ -174,7 +174,7 @@ public class FxCopSensorTest {
     verify(issuable).addIssue(issue3);
 
     verify(issueBuilder1).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
-    verify(issueBuilder1).line(5);
+    verify(issueBuilder1).line(null);
     verify(issueBuilder1).message("Second message");
 
     verify(issueBuilder2).ruleKey(RuleKey.of("foo-fxcop", "_CA1000"));

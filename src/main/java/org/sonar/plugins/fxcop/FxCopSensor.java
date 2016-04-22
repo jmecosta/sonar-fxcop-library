@@ -22,6 +22,10 @@ package org.sonar.plugins.fxcop;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import java.io.File;
+import java.util.List;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.Sensor;
@@ -36,11 +40,6 @@ import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Project;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
-
-import javax.annotation.Nullable;
-
-import java.io.File;
-import java.util.List;
 
 public class FxCopSensor implements Sensor {
 
@@ -125,12 +124,21 @@ public class FxCopSensor implements Sensor {
           issuable.addIssue(
             issuable.newIssueBuilder()
               .ruleKey(RuleKey.of(fxCopConf.repositoryKey(), ruleKey(issue.ruleConfigKey())))
-              .line(issue.line())
+              .line(fxCopToSonarQubeLine(issue.line()))
               .message(issue.message())
               .build());
         }
       }
     }
+  }
+
+  @CheckForNull
+  private static Integer fxCopToSonarQubeLine(@Nullable Integer fxcopLine) {
+    if (fxcopLine == null) {
+      return null;
+    }
+
+    return fxcopLine <= 0 ? null : fxcopLine;
   }
 
   private static List<String> splitOnCommas(@Nullable String property) {
