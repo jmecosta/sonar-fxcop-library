@@ -10,7 +10,7 @@
 
   <groupId>org.sonarsource.fxcop</groupId>
   <artifactId>sonar-fxcop-library</artifactId>
-  <version>1.4-SNAPSHOT</version>
+  <version>1.4</version>
 
   <name>SonarQube FxCop Library</name>
   <description />
@@ -39,7 +39,7 @@
     <connection>scm:git:git@github.com:SonarSource/sonar-fxcop-libray.git</connection>
     <developerConnection>scm:git:git@github.com:SonarSource/sonar-fxcop-library.git</developerConnection>
     <url>https://github.com/SonarSource/sonar-fxcop-library</url>
-    <tag>HEAD</tag>
+    <tag>1.4</tag>
   </scm>
   <issueManagement>
     <system>JIRA</system>
