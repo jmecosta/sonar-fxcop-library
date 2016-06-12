@@ -1,7 +1,7 @@
 /*
  * SonarQube FxCop Library
- * Copyright (C) 2014 SonarSource
- * dev@sonar.codehaus.org
+ * Copyright (C) 2014-2016 SonarSource SA
+ * mailto:contact AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -13,16 +13,20 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 package org.sonar.plugins.fxcop;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-
+import java.io.File;
+import java.util.List;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nullable;
+import org.apache.commons.lang.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.Sensor;
@@ -33,15 +37,12 @@ import org.sonar.api.batch.fs.InputFile.Type;
 import org.sonar.api.component.ResourcePerspectives;
 import org.sonar.api.config.Settings;
 import org.sonar.api.issue.Issuable;
+import org.sonar.api.issue.Issuable.IssueBuilder;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Project;
+import org.sonar.api.resources.Resource;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
-
-import javax.annotation.Nullable;
-
-import java.io.File;
-import java.util.List;
 
 public class FxCopSensor implements Sensor {
 
@@ -72,6 +73,8 @@ public class FxCopSensor implements Sensor {
     } else if (profile.getActiveRulesByRepository(fxCopConf.repositoryKey()).isEmpty()) {
       LOG.info("All FxCop rules are disabled, skipping its execution.");
       shouldExecute = false;
+    } else if (!SystemUtils.IS_OS_WINDOWS) {
+      shouldExecute = false;
     } else {
       shouldExecute = true;
     }
@@ -85,11 +88,11 @@ public class FxCopSensor implements Sensor {
 
   @Override
   public void analyse(Project project, SensorContext context) {
-    analyse(context, new FxCopRulesetWriter(), new FxCopReportParser(), new FxCopExecutor());
+    analyse(context, new FxCopRulesetWriter(), new FxCopReportParser(), new FxCopExecutor(), perspectives.as(Issuable.class, (Resource)project));
   }
 
   @VisibleForTesting
-  void analyse(SensorContext context, FxCopRulesetWriter writer, FxCopReportParser parser, FxCopExecutor executor) {
+  void analyse(SensorContext context, FxCopRulesetWriter writer, FxCopReportParser parser, FxCopExecutor executor, Issuable projectIssuable) {
     fxCopConf.checkProperties(settings);
 
     File reportFile;
@@ -109,29 +112,60 @@ public class FxCopSensor implements Sensor {
     }
 
     for (FxCopIssue issue : parser.parse(reportFile)) {
-      if (!hasFileAndLine(issue)) {
-        logSkippedIssue(issue, "which has no associated file.");
+      String absolutePath = getSourceFileAbsolutePath(issue);
+
+      InputFile inputFile = null;
+      if (absolutePath != null) {
+        inputFile = fs.inputFile(fs.predicates().hasAbsolutePath(absolutePath));
+      }
+
+      String messageLocation = "";
+      Issuable issuable;
+      boolean isOnProjectIssuable = false;
+      if (inputFile != null) {
+        issuable = perspectives.as(Issuable.class, inputFile);
+      } else {
+        issuable = projectIssuable;
+        isOnProjectIssuable = true;
+
+        if (absolutePath != null) {
+          messageLocation += absolutePath;
+
+          if (issue.line() != null) {
+            messageLocation += " line " + issue.line();
+          }
+        }
+
+        if (!messageLocation.isEmpty()) {
+          messageLocation += ": ";
+        }
+      }
+
+      if (issuable == null) {
+        LOG.warn("Skipping the FxCop issue at line " + issue.reportLine() + " which has no associated SonarQube issuable.");
         continue;
       }
 
-      File file = new File(new File(issue.path()), issue.file());
-      InputFile inputFile = fs.inputFile(fs.predicates().and(fs.predicates().hasType(Type.MAIN), fs.predicates().hasAbsolutePath(file.getAbsolutePath())));
-      if (inputFile == null) {
-        logSkippedIssueOutsideOfSonarQube(issue, file);
-      } else {
-        Issuable issuable = perspectives.as(Issuable.class, inputFile);
-        if (issuable == null) {
-          logSkippedIssueOutsideOfSonarQube(issue, file);
-        } else {
-          issuable.addIssue(
-            issuable.newIssueBuilder()
-              .ruleKey(RuleKey.of(fxCopConf.repositoryKey(), ruleKey(issue.ruleConfigKey())))
-              .line(issue.line())
-              .message(issue.message())
-              .build());
-        }
+      IssueBuilder issueBuilder = issuable.newIssueBuilder()
+        .ruleKey(RuleKey.of(fxCopConf.repositoryKey(), ruleKey(issue.ruleConfigKey())))
+        .message(messageLocation + issue.message());
+
+      Integer line = fxCopToSonarQubeLine(issue.line(), isOnProjectIssuable);
+      if (line != null) {
+        issueBuilder.line(line);
       }
+
+      issuable.addIssue(issueBuilder.build());
     }
+  }
+
+  @CheckForNull
+  private static Integer fxCopToSonarQubeLine(@Nullable Integer fxcopLine, boolean isOnProjectIssuable) {
+    if (fxcopLine == null || isOnProjectIssuable) {
+      return null;
+    }
+
+    return fxcopLine <= 0 ? null : fxcopLine;
   }
 
   private static List<String> splitOnCommas(@Nullable String property) {
@@ -142,16 +176,14 @@ public class FxCopSensor implements Sensor {
     }
   }
 
-  private static boolean hasFileAndLine(FxCopIssue issue) {
-    return issue.path() != null && issue.file() != null && issue.line() != null;
-  }
+  @CheckForNull
+  private static String getSourceFileAbsolutePath(FxCopIssue issue) {
+    if (issue.path() == null || issue.file() == null) {
+      return null;
+    }
 
-  private static void logSkippedIssueOutsideOfSonarQube(FxCopIssue issue, File file) {
-    logSkippedIssue(issue, "whose file \"" + file.getAbsolutePath() + "\" is not in SonarQube.");
-  }
-
-  private static void logSkippedIssue(FxCopIssue issue, String reason) {
-    LOG.debug("Skipping the FxCop issue at line " + issue.reportLine() + " " + reason);
+    File file = new File(new File(issue.path()), issue.file());
+    return file.getAbsolutePath();
   }
 
   private List<String> enabledRuleConfigKeys() {

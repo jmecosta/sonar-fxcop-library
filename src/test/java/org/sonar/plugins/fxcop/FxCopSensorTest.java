@@ -1,7 +1,7 @@
 /*
  * SonarQube FxCop Library
- * Copyright (C) 2014 SonarSource
- * dev@sonar.codehaus.org
+ * Copyright (C) 2014-2016 SonarSource SA
+ * mailto:contact AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -13,22 +13,24 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 package org.sonar.plugins.fxcop;
 
 import com.google.common.collect.ImmutableList;
+import java.io.File;
+import java.util.List;
+import org.apache.commons.lang.SystemUtils;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.sonar.api.batch.SensorContext;
-import org.sonar.api.batch.fs.FilePredicate;
 import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputFile;
-import org.sonar.api.batch.fs.InputFile.Type;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.component.ResourcePerspectives;
@@ -40,9 +42,6 @@ import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Project;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
-
-import java.io.File;
-import java.util.List;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -56,6 +55,8 @@ public class FxCopSensorTest {
 
   @Test
   public void shouldExecuteOnProject() {
+    Assume.assumeTrue(SystemUtils.IS_OS_WINDOWS);
+
     Settings settings = mock(Settings.class);
     RulesProfile profile = mock(RulesProfile.class);
     DefaultFileSystem fs = new DefaultFileSystem();
@@ -123,12 +124,17 @@ public class FxCopSensorTest {
     when(settings.getString("directories")).thenReturn(" c:/,,  d:/ ");
     when(settings.getString("references")).thenReturn(null);
 
+    InputFile class3InputFile = new DefaultInputFile("Class3.cs").setAbsolutePath(new File(new File("basePath"), "Class3.cs").getAbsolutePath()).setLanguage("foo");
+    // Class4 missing on purpose
     InputFile class5InputFile = new DefaultInputFile("Class5.cs").setAbsolutePath(new File(new File("basePath"), "Class5.cs").getAbsolutePath()).setLanguage("foo");
     InputFile class6InputFile = new DefaultInputFile("Class6.cs").setAbsolutePath(new File(new File("basePath"), "Class6.cs").getAbsolutePath()).setLanguage("foo");
     InputFile class7InputFile = new DefaultInputFile("Class7.cs").setAbsolutePath(new File(new File("basePath"), "Class7.cs").getAbsolutePath()).setLanguage("foo");
+    // Class8 has language "bar"
     InputFile class8InputFile = new DefaultInputFile("Class8.cs").setAbsolutePath(new File(new File("basePath"), "Class8.cs").getAbsolutePath()).setLanguage("bar");
     InputFile class9InputFile = new DefaultInputFile("Class9.cs").setAbsolutePath(new File(new File("basePath"), "Class9.cs").getAbsolutePath()).setLanguage("foo");
 
+    fs.add(class3InputFile);
+    // Class4 missing on purpose
     fs.add(class5InputFile);
     fs.add(class6InputFile);
     fs.add(class7InputFile);
@@ -147,28 +153,50 @@ public class FxCopSensorTest {
     IssueBuilder issueBuilder3 = mockIssueBuilder();
     when(issueBuilder3.build()).thenReturn(issue3);
 
+    Issue issue4 = mock(Issue.class);
+    IssueBuilder issueBuilder4 = mockIssueBuilder();
+    when(issueBuilder4.build()).thenReturn(issue4);
+
+    Issue issue5 = mock(Issue.class);
+    IssueBuilder issueBuilder5 = mockIssueBuilder();
+    when(issueBuilder5.build()).thenReturn(issue5);
+
     Issuable issuable = mock(Issuable.class);
-    when(perspectives.as(Issuable.class, class5InputFile)).thenReturn(issuable);
-    when(perspectives.as(Issuable.class, class6InputFile)).thenReturn(issuable);
-    when(perspectives.as(Issuable.class, class9InputFile)).thenReturn(issuable);
-    when(issuable.newIssueBuilder()).thenReturn(issueBuilder1, issueBuilder2, issueBuilder3);
+    when(perspectives.as(Mockito.eq(Issuable.class), Mockito.any(InputFile.class))).thenReturn(issuable);
+    when(perspectives.as(Issuable.class, class7InputFile)).thenReturn(null);
+    when(issuable.newIssueBuilder()).thenReturn(issueBuilder1, issueBuilder2, issueBuilder3, issueBuilder4, issueBuilder5);
+
+    Issue projectIssue1 = mock(Issue.class);
+    IssueBuilder projectIssueBuilder1 = mockIssueBuilder();
+    when(projectIssueBuilder1.build()).thenReturn(projectIssue1);
+
+    Issue projectIssue2 = mock(Issue.class);
+    IssueBuilder projectIssueBuilder2 = mockIssueBuilder();
+    when(projectIssueBuilder2.build()).thenReturn(projectIssue2);
+
+    Issue projectIssue3 = mock(Issue.class);
+    IssueBuilder projectIssueBuilder3 = mockIssueBuilder();
+    when(projectIssueBuilder3.build()).thenReturn(projectIssue3);
+
+    Issuable projectIssuable = mock(Issuable.class);
+    when(projectIssuable.newIssueBuilder()).thenReturn(projectIssueBuilder1, projectIssueBuilder2, projectIssueBuilder3);
 
     FxCopRulesetWriter writer = mock(FxCopRulesetWriter.class);
 
     FxCopReportParser parser = mock(FxCopReportParser.class);
     when(parser.parse(new File(workingDir, "fxcop-report.xml"))).thenReturn(
       ImmutableList.of(
-        new FxCopIssue(100, "CA0000", null, "Class1.cs", 1, "Dummy message"),
-        new FxCopIssue(200, "CA0000", "basePath", null, 2, "Dummy message"),
-        new FxCopIssue(300, "CA0000", "basePath", "Class3.cs", null, "Dummy message"),
-        new FxCopIssue(400, "CA0000", "basePath", "Class4.cs", 4, "First message"),
-        new FxCopIssue(500, "CA0000", "basePath", "Class5.cs", 5, "Second message"),
-        new FxCopIssue(600, "CA1000", "basePath", "Class6.cs", 6, "Third message"),
-        new FxCopIssue(700, "CA0000", "basePath", "Class7.cs", 7, "Fourth message"),
-        new FxCopIssue(800, "CA0000", "basePath", "Class8.cs", 8, "Fifth message"),
-        new FxCopIssue(800, "CR1000", "basePath", "Class9.cs", 9, "Sixth message")));
+        new FxCopIssue(100, "CA0000", null, "Class1.cs", 1, "Dummy message"), // no path -> project
+        new FxCopIssue(200, "CA0000", "basePath", null, 2, "Dummy message"), // no filename -> project
+        new FxCopIssue(300, "CA0000", "basePath", "Class3.cs", null, "Dummy message"), // no line -> on file
+        new FxCopIssue(400, "CA0000", "basePath", "Class4.cs", 4, "First message"), // no input file -> on project
+        new FxCopIssue(500, "CA0000", "basePath", "Class5.cs", 0, "Second message"), // all good but line 0 -> on file
+        new FxCopIssue(600, "CA1000", "basePath", "Class6.cs", 6, "Third message"), // all good -> on file+line
+        new FxCopIssue(700, "CA0000", "basePath", "Class7.cs", 7, "Fourth message"), // null issuable but has input file -> skipped
+        new FxCopIssue(800, "CA0000", "basePath", "Class8.cs", 8, "Fifth message"), // language "bar" -> on file+line
+        new FxCopIssue(800, "CR1000", "basePath", "Class9.cs", 9, "Sixth message"))); // all good -> on file+line
 
-    sensor.analyse(context, writer, parser, executor);
+    sensor.analyse(context, writer, parser, executor, projectIssuable);
 
     verify(writer).write(ImmutableList.of("CA0000", "CA1000", "CR1000"), new File(workingDir, "fxcop-sonarqube.ruleset"));
     verify(executor).execute("FxCopCmd.exe", "MyLibrary.dll", new File(workingDir, "fxcop-sonarqube.ruleset"), new File(workingDir, "fxcop-report.xml"), 42, true,
@@ -177,18 +205,44 @@ public class FxCopSensorTest {
     verify(issuable).addIssue(issue1);
     verify(issuable).addIssue(issue2);
     verify(issuable).addIssue(issue3);
+    verify(issuable).addIssue(issue4);
+    verify(issuable).addIssue(issue5);
 
     verify(issueBuilder1).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
-    verify(issueBuilder1).line(5);
-    verify(issueBuilder1).message("Second message");
+    verify(issueBuilder1, Mockito.never()).line(Mockito.anyInt());
+    verify(issueBuilder1).message("Dummy message");
 
-    verify(issueBuilder2).ruleKey(RuleKey.of("foo-fxcop", "_CA1000"));
-    verify(issueBuilder2).line(6);
-    verify(issueBuilder2).message("Third message");
+    verify(issueBuilder2).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
+    verify(issueBuilder2, Mockito.never()).line(Mockito.anyInt());
+    verify(issueBuilder2).message("Second message");
 
-    verify(issueBuilder3).ruleKey(RuleKey.of("foo-fxcop", "CustomRuleTemplate_42"));
-    verify(issueBuilder3).line(9);
-    verify(issueBuilder3).message("Sixth message");
+    verify(issueBuilder3).ruleKey(RuleKey.of("foo-fxcop", "_CA1000"));
+    verify(issueBuilder3).line(6);
+    verify(issueBuilder3).message("Third message");
+
+    verify(issueBuilder4).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
+    verify(issueBuilder4).line(8);
+    verify(issueBuilder4).message("Fifth message");
+
+    verify(issueBuilder5).ruleKey(RuleKey.of("foo-fxcop", "CustomRuleTemplate_42"));
+    verify(issueBuilder5).line(9);
+    verify(issueBuilder5).message("Sixth message");
+
+    verify(projectIssuable).addIssue(projectIssue1);
+    verify(projectIssuable).addIssue(projectIssue2);
+    verify(projectIssuable).addIssue(projectIssue3);
+
+    verify(projectIssueBuilder1).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
+    verify(projectIssueBuilder1, Mockito.never()).line(Mockito.anyInt());
+    verify(projectIssueBuilder1).message("Dummy message");
+
+    verify(projectIssueBuilder2).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
+    verify(projectIssueBuilder2, Mockito.never()).line(Mockito.anyInt());
+    verify(projectIssueBuilder2).message("Dummy message");
+
+    verify(projectIssueBuilder3).ruleKey(RuleKey.of("foo-fxcop", "_CA0000"));
+    verify(projectIssueBuilder3, Mockito.never()).line(Mockito.anyInt());
+    verify(projectIssueBuilder3).message(new File(new File("basePath"), "Class4.cs").getAbsolutePath() + " line 4: First message");
   }
 
   @Test
@@ -214,7 +268,7 @@ public class FxCopSensorTest {
     FxCopReportParser parser = mock(FxCopReportParser.class);
     FxCopExecutor executor = mock(FxCopExecutor.class);
 
-    sensor.analyse(context, writer, parser, executor);
+    sensor.analyse(context, writer, parser, executor, mock(Issuable.class));
 
     verify(writer, Mockito.never()).write(Mockito.anyList(), Mockito.any(File.class));
     verify(executor, Mockito.never()).execute(
@@ -225,15 +279,11 @@ public class FxCopSensorTest {
 
   @Test
   public void check_properties() {
-    thrown.expectMessage("fooAssemblyKey");
+    thrown.expectMessage("No FxCop analysis has been performed on this project");
 
     FxCopConfiguration fxCopConf = new FxCopConfiguration("", "", "fooAssemblyKey", "", "", "", "", "", "");
     new FxCopSensor(fxCopConf, mock(Settings.class), mock(RulesProfile.class), mock(FileSystem.class), mock(ResourcePerspectives.class))
       .analyse(mock(Project.class), mock(SensorContext.class));
-  }
-
-  private static FilePredicate mainWithAbsolutePath(FileSystem fs, File file) {
-    return fs.predicates().and(fs.predicates().hasType(Type.MAIN), fs.predicates().hasAbsolutePath(file.getAbsolutePath()));
   }
 
   private static IssueBuilder mockIssueBuilder() {

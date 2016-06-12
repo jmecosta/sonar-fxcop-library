@@ -1,7 +1,7 @@
 /*
  * SonarQube FxCop Library
- * Copyright (C) 2014 SonarSource
- * dev@sonar.codehaus.org
+ * Copyright (C) 2014-2016 SonarSource SA
+ * mailto:contact AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 package org.sonar.plugins.fxcop;
 
@@ -23,18 +23,16 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closeables;
-
-import javax.annotation.Nullable;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamConstants;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
+import javax.annotation.Nullable;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 public class FxCopReportParser {
 
@@ -48,6 +46,7 @@ public class FxCopReportParser {
     private XMLStreamReader stream;
     private final ImmutableList.Builder<FxCopIssue> filesBuilder = ImmutableList.builder();
     private String ruleConfigKey;
+    private boolean isSuppressed = false;
 
     public List<FxCopIssue> parse(File file) {
       this.file = file;
@@ -65,7 +64,7 @@ public class FxCopReportParser {
 
             if ("Message".equals(tagName)) {
               handleMessageTag();
-            } else if ("Issue".equals(tagName)) {
+            } else if (!isSuppressed && "Issue".equals(tagName)) {
               handleIssueTag();
             }
           }
@@ -94,6 +93,7 @@ public class FxCopReportParser {
 
     private void handleMessageTag() {
       this.ruleConfigKey = getRequiredAttribute("CheckId");
+      this.isSuppressed = "ExcludedInSource".equals(getAttribute("Status"));
     }
 
     private void handleIssueTag() throws XMLStreamException {
